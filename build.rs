@@ -1,4 +1,4 @@
-use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::HashMap, hash::Hash};
+use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::HashMap};
 
 use netsblox_extension_util::{ExtensionInfo, CustomBlock, BlockType, Category, TargetObject, LabelPart};
 use regex::Regex;
@@ -79,6 +79,7 @@ fn recreate_netsblox_extension_block(item: &ItemConst) -> CustomBlock {
                             // TODO
                         },
                         "impl_fn" => instance.impl_fn = extract_string(field),
+                        "target" => {},
                         _ => warn!("Unknown field: {}", name)
                     }
                 }
