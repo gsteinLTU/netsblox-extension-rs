@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-use netsblox_extension_macro::{netsblox_extension_info, netsblox_extension_block};
-use netsblox_extension_util::{CustomBlock, BlockType, Category, ExtensionInfo};
+use netsblox_extension_macro::*;
+use netsblox_extension_util::*;
 use wasm_bindgen::prelude::wasm_bindgen;
 use web_sys::console;
 
@@ -21,6 +21,22 @@ const LOG_HELLO_WORLD: CustomBlock = CustomBlock {
     target: netsblox_extension_util::TargetObject::Both
 };
 
+#[netsblox_extension_block]
+const LOG_HELLO_NAME: CustomBlock = CustomBlock { 
+    name: "logHelloName", 
+    block_type: BlockType::Command, 
+    category: Category::Control, 
+    spec: "Log Hello %name", 
+    defaults: vec![], 
+    impl_fn: "hello_name",
+    target: netsblox_extension_util::TargetObject::Both
+};
+
+#[netsblox_extension_label_part]
+const LABEL_PART_NAME: LabelPart = LabelPart {
+    spec: "%name",
+    slot_type: InputSlotMorphOptions { text: Some("name") },
+};
 
 #[wasm_bindgen]
 pub fn hello_world() {

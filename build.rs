@@ -1,6 +1,6 @@
 use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::HashMap, hash::Hash};
 
-use netsblox_extension_util::{ExtensionInfo, CustomBlock, BlockType, Category, TargetObject};
+use netsblox_extension_util::{ExtensionInfo, CustomBlock, BlockType, Category, TargetObject, LabelPart};
 use regex::Regex;
 use simple_error::bail;
 use syn::{Item, PathSegment, ItemConst, Expr, Member, Lit};
@@ -19,24 +19,11 @@ fn recreate_netsblox_extension_info(item: &ItemConst) -> ExtensionInfo {
     if let Expr::Struct(s) = &*item.expr {
         for field in &s.fields {
             if let Member::Named(named) = &field.member { 
-                
                 let name = named.to_string();
                 {
                     match name.as_str() {
-                        "name" => { 
-                            if let Expr::Lit(lit) = &field.expr {
-                                if let Lit::Str(val) = &lit.lit {
-                                    let mut lit = val.token().to_string();
-
-                                    // Remove quotes from Literal value
-                                    lit = lit.strip_prefix("\"").unwrap().strip_suffix("\"").unwrap().to_string();
-
-                                    // Leaking would be bad, but this script has a short life
-                                    instance.name = Box::leak(lit.into_boxed_str());
-                                }
-                            }
-                        }
-                        _ => { warn!("Unknown field: {}", name) }
+                        "name" => instance.name = extract_string(field),
+                        _ => warn!("Unknown field: {}", name) 
                     }
                 }
             }
@@ -56,19 +43,15 @@ fn recreate_netsblox_extension_block(item: &ItemConst) -> CustomBlock {
                 let name = named.to_string();
                 {
                     match name.as_str() {
-                        "name" => { 
-                            instance.name = extract_string(field);
-                        },
+                        "name" => instance.name = extract_string(field),
                         "block_type" => {
                             if let Expr::Path(p) = &field.expr {
                                 let block_type = &p.path.segments.last().unwrap().ident.to_string();
                                 match block_type.as_str() {
-                                    "Command" => { instance.block_type = BlockType::Command },
-                                    "Reporter" => { instance.block_type = BlockType::Reporter },
-                                    "Predicate" => { instance.block_type = BlockType::Predicate },
-                                    _ => {
-                                        warn!("Unknown block type {}", block_type)
-                                    }
+                                    "Command" => instance.block_type = BlockType::Command,
+                                    "Reporter" => instance.block_type = BlockType::Reporter,
+                                    "Predicate" => instance.block_type = BlockType::Predicate,
+                                    _ => warn!("Unknown block type {}", block_type)
                                 }
                             }
                         },
@@ -76,34 +59,49 @@ fn recreate_netsblox_extension_block(item: &ItemConst) -> CustomBlock {
                             if let Expr::Path(p) = &field.expr {
                                 let cat = &p.path.segments.last().unwrap().ident.to_string();
                                 match cat.as_str() {
-                                    "Motion" => { instance.category = Category::Motion },
-                                    "Looks" => { instance.category = Category::Looks },
-                                    "Sound" => { instance.category = Category::Sound },
-                                    "Pen" => { instance.category = Category::Pen },
-                                    "Network" => { instance.category = Category::Network },
-                                    "Control" => { instance.category = Category::Control },
-                                    "Sensing" => { instance.category = Category::Sensing },
-                                    "Operators" => { instance.category = Category::Operators },
-                                    "Variables" => { instance.category = Category::Variables },
-                                    "Custom" => { instance.category = Category::Custom },
+                                    "Motion" => instance.category = Category::Motion,
+                                    "Looks" => instance.category = Category::Looks,
+                                    "Sound" => instance.category = Category::Sound,
+                                    "Pen" => instance.category = Category::Pen,
+                                    "Network" => instance.category = Category::Network,
+                                    "Control" => instance.category = Category::Control,
+                                    "Sensing" => instance.category = Category::Sensing,
+                                    "Operators" => instance.category = Category::Operators,
+                                    "Variables" => instance.category = Category::Variables,
+                                    "Custom" => instance.category = Category::Custom,
                                     //TODO "CustomCategory" => { instance.category = Category::CustomCategory(())},
-                                    _ => {
-                                        warn!("Unknown category {}", cat)
-                                    }
+                                    _ => warn!("Unknown category {}", cat)
                                 }
                             }
                         },
-                        "spec" => { 
-                            instance.spec = extract_string(field);
-
-                        },
+                        "spec" => instance.spec = extract_string(field),
                         "defaults" => {
                             // TODO
                         },
-                        "impl_fn" => { 
-                            instance.impl_fn = extract_string(field);
-                        },
-                        _ => { warn!("Unknown field: {}", name) }
+                        "impl_fn" => instance.impl_fn = extract_string(field),
+                        _ => warn!("Unknown field: {}", name)
+                    }
+                }
+            }
+        }
+    }
+    instance
+}
+
+
+// Turn syn item into instance
+fn recreate_netsblox_extension_label_part(item: &ItemConst) -> LabelPart {
+    let mut instance = LabelPart::default();
+
+    if let Expr::Struct(s) = &*item.expr {
+        for field in &s.fields {
+            if let Member::Named(named) = &field.member { 
+                
+                let name = named.to_string();
+                {
+                    match name.as_str() {
+                        "spec" => instance.spec = extract_string(field),
+                        _ => warn!("Unknown field: {}", name)
                     }
                 }
             }
@@ -138,6 +136,7 @@ fn main() -> Result<(), Box<dyn Error>>  {
 
     let mut extension_info: Option<ExtensionInfo> = None;
     let mut custom_blocks: HashMap<String, CustomBlock> = HashMap::new();
+    let mut label_parts: HashMap<String, LabelPart> = HashMap::new();
 
     // Parse all items
     for item in ast.items {
@@ -157,6 +156,11 @@ fn main() -> Result<(), Box<dyn Error>>  {
                         let block = recreate_netsblox_extension_block(&c);
                         warn!("Found custom block {:?}", block);
                         custom_blocks.insert(block.name.to_string(), block);
+                    },
+                    "netsblox_extension_label_part" => {
+                        let label_part = recreate_netsblox_extension_label_part(&c);
+                        warn!("Found label part block {:?}", label_part);
+                        label_parts.insert(label_part.spec.to_string(), label_part);
                     },
                     _ => {}
                 };
@@ -240,7 +244,24 @@ fn main() -> Result<(), Box<dyn Error>>  {
 
         content = content.replace("$BLOCKS", blocks_str.as_str());
         
-        content = content.replace("$LABELPARTS", "");
+        let mut label_parts_string = "".to_string();
+
+        for label_part in label_parts.values() {
+            label_parts_string += "\t\t\t\tnew Extension.LabelPart(\n";
+            label_parts_string += format!("\t\t\t\t\t'{}',\n", label_part.spec).as_str();
+            label_parts_string += "\t\t\t\t\t() => {\n";
+            label_parts_string += "\t\t\t\t\t\tconst part = new InputSlotMorph(\n";
+            label_parts_string += "\t\t\t\t\t\t\tnull, // text\n";
+            label_parts_string += "\t\t\t\t\t\t\tfalse, // non-numeric\n";
+            label_parts_string += "\t\t\t\t\t\t\tnull,\n";
+            label_parts_string += "\t\t\t\t\t\t\tfalse\n";
+            label_parts_string += "\t\t\t\t\t\t);\n";
+            label_parts_string += "\t\t\t\t\t\treturn part;\n";
+            label_parts_string += "\t\t\t\t\t}\n";
+            label_parts_string += "\t\t\t\t),\n";
+        }
+
+        content = content.replace("$LABELPARTS", &label_parts_string);
 
         let mut out_file = File::create("./index.js")?;
         out_file.write_all(content.as_bytes())?;
