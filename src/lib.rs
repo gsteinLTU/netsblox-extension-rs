@@ -38,6 +38,11 @@ const LABEL_PART_NAME: LabelPart = LabelPart {
     slot_type: InputSlotMorphOptions { text: Some("name") },
 };
 
+#[wasm_bindgen(start)]
+pub fn main() {
+    console::log_1(&"Hello from Rust!".to_owned().into());
+}
+
 #[wasm_bindgen]
 pub fn hello_world() {
     console::log_1(&"Hello World!".to_owned().into());
