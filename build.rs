@@ -138,6 +138,7 @@ fn main() -> Result<(), Box<dyn Error>>  {
     let mut extension_info: Option<ExtensionInfo> = None;
     let mut custom_blocks: HashMap<String, CustomBlock> = HashMap::new();
     let mut label_parts: HashMap<String, LabelPart> = HashMap::new();
+    let mut fn_names: Vec<String> = vec![];
 
     // Parse all items
     for item in ast.items {
@@ -156,7 +157,8 @@ fn main() -> Result<(), Box<dyn Error>>  {
                     "netsblox_extension_block" => {
                         let block = recreate_netsblox_extension_block(&c);
                         warn!("Found custom block {:?}", block);
-                        custom_blocks.insert(block.name.to_string(), block);
+                        custom_blocks.insert(block.name.to_string(), block.clone());
+                        fn_names.push(block.impl_fn.to_string());
                     },
                     "netsblox_extension_label_part" => {
                         let label_part = recreate_netsblox_extension_label_part(&c);
@@ -239,7 +241,7 @@ fn main() -> Result<(), Box<dyn Error>>  {
                 c.iter().last().unwrap().unwrap().as_str()
             }).collect::<Vec<&str>>().join(", ");
 
-            blocks_str += format!("\t\t\t\t\tfunction ({}) {{ {}({}) }}\n", label_parts_str, block.impl_fn, label_parts_str).as_str();
+            blocks_str += format!("\t\t\t\t\tfunction ({}) {{ {}_fns.{}({}) }}\n", label_parts_str, extension_info.name, block.impl_fn, label_parts_str).as_str();
             blocks_str += "\t\t\t\t).for(SpriteMorph, StageMorph),\n";
         }
 
@@ -263,6 +265,10 @@ fn main() -> Result<(), Box<dyn Error>>  {
         }
 
         content = content.replace("$LABELPARTS", &label_parts_string);
+
+        content = content.replace("$IMPORTS_LIST", &fn_names.join(", "));
+        content = content.replace("$WINDOW_IMPORTS", &fn_names.iter().map(|fn_name| format!("\t\twindow.{}_fns.{} = {};", extension_info.name, fn_name, fn_name)).collect::<Vec<String>>().join("\n"));
+        
 
         let mut out_file = File::create("./index.js")?;
         out_file.write_all(content.as_bytes())?;
