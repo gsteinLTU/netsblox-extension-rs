@@ -1,0 +1,7 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "./netsblox-extension-macro/Cargo.toml",
+        "./netsblox-extension-util/Cargo.toml",
+        "./Cargo.toml"
+    ]
+}
