@@ -188,13 +188,9 @@ fn recreate_netsblox_extension_label_part(item: &ItemConst) -> LabelPart {
 fn extract_string(field: &syn::FieldValue) -> &'static str {
     if let Expr::Lit(lit) = &field.expr {
         if let Lit::Str(val) = &lit.lit {
-            let mut lit = val.token().to_string();
-
-            // Remove quotes from Literal value
-            lit = lit.strip_prefix("\"").unwrap().strip_suffix("\"").unwrap().to_string();
-
+            let val = val.value();
             // Leaking would be bad, but this script has a short life
-            return Box::leak(lit.into_boxed_str());
+            return Box::leak(val.into_boxed_str());
         }
     }
     
