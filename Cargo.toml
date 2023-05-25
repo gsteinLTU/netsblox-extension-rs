@@ -14,11 +14,4 @@ netsblox-extension-macro = { path = "./netsblox-extension-macro" }
 netsblox-extension-util = { path = "./netsblox-extension-util" }
 
 [build-dependencies]
-syn = { version = "2.0.16", features = ["extra-traits", "visit"] }
-netsblox-extension-macro = { path = "./netsblox-extension-macro" }
 netsblox-extension-util = { path = "./netsblox-extension-util" }
-quote = { version = "1.0.27" }
-simple-error = { version = "0.3.0" }
-serde = { version = "1.0.163" }
-serde_json = { version = "1.0.96" }
-regex = { version = "1.8.2" }
