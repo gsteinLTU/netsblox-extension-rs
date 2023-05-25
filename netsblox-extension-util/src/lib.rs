@@ -185,7 +185,7 @@ fn recreate_netsblox_extension_label_part(item: &ItemConst) -> LabelPart {
     instance
 }
 
-fn extract_string(field: &syn::FieldValue) -> &'static mut str {
+fn extract_string(field: &syn::FieldValue) -> &'static str {
     if let Expr::Lit(lit) = &field.expr {
         if let Lit::Str(val) = &lit.lit {
             let mut lit = val.token().to_string();
@@ -198,7 +198,7 @@ fn extract_string(field: &syn::FieldValue) -> &'static mut str {
         }
     }
     
-    return Box::leak("".to_string().into_boxed_str());
+    return "";
 }
 
 pub fn build() -> Result<(), Box<dyn Error>>  {  
