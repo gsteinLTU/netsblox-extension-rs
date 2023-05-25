@@ -13,7 +13,7 @@ pub struct ExtensionInfo {
 pub struct CustomBlock {
     pub name: &'static str,
     pub block_type: BlockType, 
-    pub category: Category, 
+    pub category: &'static str, 
     pub spec: &'static str, 
     pub defaults: Vec<&'static str>, 
     pub impl_fn: &'static str,
@@ -53,32 +53,6 @@ pub struct CustomCategory {
     pub color: (f64, f64, f64)
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Default)]
-pub enum Category {
-    #[default]
-    #[serde(rename = "motion")]
-    Motion,
-    #[serde(rename = "looks")]
-    Looks,
-    #[serde(rename = "sound")]
-    Sound,
-    #[serde(rename = "pen")]
-    Pen,
-    #[serde(rename = "network")]
-    Network,
-    #[serde(rename = "control")]
-    Control,
-    #[serde(rename = "sensing")]
-    Sensing,
-    #[serde(rename = "operators")]
-    Operators,
-    #[serde(rename = "variables")]
-    Variables,
-    #[serde(rename = "custom")]
-    Custom,
-    CustomCategory(CustomCategory)
-} 
-
 // Macro to allow build script to print output
 macro_rules! warn {
     ($($tokens: tt)*) => {
@@ -97,6 +71,28 @@ fn recreate_netsblox_extension_info(item: &ItemConst) -> ExtensionInfo {
                 {
                     match name.as_str() {
                         "name" => instance.name = extract_string(field),
+                        _ => warn!("Unknown field: {}", name) 
+                    }
+                }
+            }
+        }
+    }
+    instance
+}
+
+
+// Turn syn item into instance
+fn recreate_netsblox_extension_custom_category(item: &ItemConst) -> CustomCategory {
+    let mut instance = CustomCategory::default();
+
+    if let Expr::Struct(s) = &*item.expr {
+        for field in &s.fields {
+            if let Member::Named(named) = &field.member { 
+                let name = named.to_string();
+                {
+                    match name.as_str() {
+                        "name" => instance.name = extract_string(field),
+                        "color" => {},
                         _ => warn!("Unknown field: {}", name) 
                     }
                 }
@@ -129,25 +125,7 @@ fn recreate_netsblox_extension_block(item: &ItemConst) -> CustomBlock {
                                 }
                             }
                         },
-                        "category" => {
-                            if let Expr::Path(p) = &field.expr {
-                                let cat = &p.path.segments.last().unwrap().ident.to_string();
-                                match cat.as_str() {
-                                    "Motion" => instance.category = Category::Motion,
-                                    "Looks" => instance.category = Category::Looks,
-                                    "Sound" => instance.category = Category::Sound,
-                                    "Pen" => instance.category = Category::Pen,
-                                    "Network" => instance.category = Category::Network,
-                                    "Control" => instance.category = Category::Control,
-                                    "Sensing" => instance.category = Category::Sensing,
-                                    "Operators" => instance.category = Category::Operators,
-                                    "Variables" => instance.category = Category::Variables,
-                                    "Custom" => instance.category = Category::Custom,
-                                    //TODO "CustomCategory" => { instance.category = Category::CustomCategory(())},
-                                    _ => warn!("Unknown category {}", cat)
-                                }
-                            }
-                        },
+                        "category" => instance.category = extract_string(field),
                         "spec" => instance.spec = extract_string(field),
                         "defaults" => {
                             // TODO
@@ -207,6 +185,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
     let mut extension_info: Option<ExtensionInfo> = None;
     let mut custom_blocks: HashMap<String, CustomBlock> = HashMap::new();
     let mut label_parts: HashMap<String, LabelPart> = HashMap::new();
+    let mut custom_categories: HashMap<String, CustomCategory> = HashMap::new();
     let mut fn_names: Vec<String> = vec![];
 
     // Parse all items
@@ -234,6 +213,11 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                         warn!("Found label part block {:?}", label_part);
                         label_parts.insert(label_part.spec.to_string(), label_part);
                     },
+                    "netsblox_extension_category" => {
+                        let category = recreate_netsblox_extension_custom_category(&c);
+                        warn!("Found custom category {:?}", category);
+                        custom_categories.insert(category.name.to_string(), category);
+                    },
                     _ => {}
                 };
             }
@@ -246,7 +230,14 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         content = content.replace("$EXTENSION_NAME", extension_info.name);
         content = content.replace("$MENU", "");
         content = content.replace("$SETTINGS", "");
-        content = content.replace("$CATEGORIES", "");
+        
+        let mut categories_string = "".to_string();
+
+        for cat in custom_categories.values() {
+            categories_string += format!("\t\t\t\tnew Extension.Category('{}', new Color(195, 0, 204)),\n", cat.name).as_str();
+        }
+
+        content = content.replace("$CATEGORIES", &categories_string);
 
         let mut palette_string = "".to_string();
 

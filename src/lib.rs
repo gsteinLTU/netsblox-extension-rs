@@ -5,6 +5,12 @@ use netsblox_extension_util::*;
 use wasm_bindgen::prelude::wasm_bindgen;
 use web_sys::console;
 
+#[netsblox_extension_category]
+const HELLO_WORLD_CATEGORY: CustomCategory = CustomCategory {
+    name: "helloworld",
+    color: (100.0, 149.0, 237.0),
+};
+
 #[netsblox_extension_info]
 const INFO: ExtensionInfo = ExtensionInfo { 
     name: "ExampleExtension" 
@@ -14,7 +20,7 @@ const INFO: ExtensionInfo = ExtensionInfo {
 const LOG_HELLO_WORLD: CustomBlock = CustomBlock { 
     name: "logHelloWorld", 
     block_type: BlockType::Command, 
-    category: Category::Control, 
+    category: "helloworld", 
     spec: "Log Hello World!", 
     defaults: vec![], 
     impl_fn: "hello_world",
@@ -25,7 +31,7 @@ const LOG_HELLO_WORLD: CustomBlock = CustomBlock {
 const LOG_HELLO_NAME: CustomBlock = CustomBlock { 
     name: "logHelloName", 
     block_type: BlockType::Command, 
-    category: Category::Control, 
+    category: "helloworld", 
     spec: "Log Hello %name", 
     defaults: vec![], 
     impl_fn: "hello_name",

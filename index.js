@@ -22,6 +22,7 @@
 
         getCategories() {
             return [
+				new Extension.Category('helloworld', new Color(195, 0, 204)),
 
             ];
         }
@@ -29,7 +30,7 @@
         getPalette() {
             return [
 				new Extension.PaletteCategory(
-					'control',
+					'helloworld',
 					[
 						new Extension.Palette.Block('logHelloName'),
 						new Extension.Palette.Block('logHelloWorld'),
@@ -37,7 +38,7 @@
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
-					'control',
+					'helloworld',
 					[
 						new Extension.Palette.Block('logHelloName'),
 						new Extension.Palette.Block('logHelloWorld'),
@@ -53,7 +54,7 @@
 				new Extension.Block(
 					'logHelloName',
 					'command',
-					'control',
+					'helloworld',
 					'Log Hello %name',
 					[],
 					function (name) { ExampleExtension_fns.hello_name(name) }
@@ -61,7 +62,7 @@
 				new Extension.Block(
 					'logHelloWorld',
 					'command',
-					'control',
+					'helloworld',
 					'Log Hello World!',
 					[],
 					function () { ExampleExtension_fns.hello_world() }
