@@ -22,7 +22,7 @@
 
         getCategories() {
             return [
-				new Extension.Category('helloworld', new Color(195, 0, 204)),
+				new Extension.Category('Hello World', new Color(100, 149, 237)),
 
             ];
         }
@@ -30,18 +30,18 @@
         getPalette() {
             return [
 				new Extension.PaletteCategory(
-					'helloworld',
+					'Hello World',
 					[
-						new Extension.Palette.Block('logHelloName'),
 						new Extension.Palette.Block('logHelloWorld'),
+						new Extension.Palette.Block('logHelloName'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
-					'helloworld',
+					'Hello World',
 					[
-						new Extension.Palette.Block('logHelloName'),
 						new Extension.Palette.Block('logHelloWorld'),
+						new Extension.Palette.Block('logHelloName'),
 					],
 					StageMorph
 				),
@@ -52,20 +52,20 @@
         getBlocks() {
             return [
 				new Extension.Block(
-					'logHelloName',
-					'command',
-					'helloworld',
-					'Log Hello %name',
-					[],
-					function (name) { ExampleExtension_fns.hello_name(name) }
-				).for(SpriteMorph, StageMorph),
-				new Extension.Block(
 					'logHelloWorld',
 					'command',
-					'helloworld',
+					'Hello World',
 					'Log Hello World!',
 					[],
 					function () { ExampleExtension_fns.hello_world() }
+				).for(SpriteMorph, StageMorph),
+				new Extension.Block(
+					'logHelloName',
+					'command',
+					'Hello World',
+					'Log Hello %name',
+					[],
+					function (name) { ExampleExtension_fns.hello_name(name) }
 				).for(SpriteMorph, StageMorph),
 
             ];

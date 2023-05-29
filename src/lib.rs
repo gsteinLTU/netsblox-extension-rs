@@ -7,7 +7,7 @@ use web_sys::console;
 
 #[netsblox_extension_category]
 const HELLO_WORLD_CATEGORY: CustomCategory = CustomCategory {
-    name: "helloworld",
+    name: "Hello World",
     color: (100.0, 149.0, 237.0),
 };
 
@@ -20,7 +20,7 @@ const INFO: ExtensionInfo = ExtensionInfo {
 const LOG_HELLO_WORLD: CustomBlock = CustomBlock { 
     name: "logHelloWorld", 
     block_type: BlockType::Command, 
-    category: "helloworld", 
+    category: "Hello World", 
     spec: "Log Hello World!", 
     defaults: vec![], 
     impl_fn: "hello_world",
@@ -31,7 +31,7 @@ const LOG_HELLO_WORLD: CustomBlock = CustomBlock {
 const LOG_HELLO_NAME: CustomBlock = CustomBlock { 
     name: "logHelloName", 
     block_type: BlockType::Command, 
-    category: "helloworld", 
+    category: "Hello World", 
     spec: "Log Hello %name", 
     defaults: vec![], 
     impl_fn: "hello_name",

@@ -70,7 +70,7 @@ fn recreate_netsblox_extension_info(item: &ItemConst) -> ExtensionInfo {
                 let name = named.to_string();
                 {
                     match name.as_str() {
-                        "name" => instance.name = extract_string(field),
+                        "name" => instance.name = extract_string(&field.expr),
                         _ => warn!("Unknown field: {}", name) 
                     }
                 }
@@ -91,8 +91,20 @@ fn recreate_netsblox_extension_custom_category(item: &ItemConst) -> CustomCatego
                 let name = named.to_string();
                 {
                     match name.as_str() {
-                        "name" => instance.name = extract_string(field),
-                        "color" => {},
+                        "name" => instance.name = extract_string(&field.expr),
+                        "color" => {
+                            if let Expr::Tuple(t) = &field.expr {
+                                let colors = &t.elems.iter().collect::<Vec<_>>();
+
+                                if colors.len() < 3 {
+                                    warn!("Invalid color for category {}", instance.name);
+                                } else {
+                                    instance.color.0 = extract_f64(colors[0]);
+                                    instance.color.1 = extract_f64(colors[1]);
+                                    instance.color.2 = extract_f64(colors[2]);
+                                }
+                            }
+                        },
                         _ => warn!("Unknown field: {}", name) 
                     }
                 }
@@ -113,7 +125,7 @@ fn recreate_netsblox_extension_block(item: &ItemConst) -> CustomBlock {
                 let name = named.to_string();
                 {
                     match name.as_str() {
-                        "name" => instance.name = extract_string(field),
+                        "name" => instance.name = extract_string(&field.expr),
                         "block_type" => {
                             if let Expr::Path(p) = &field.expr {
                                 let block_type = &p.path.segments.last().unwrap().ident.to_string();
@@ -125,12 +137,12 @@ fn recreate_netsblox_extension_block(item: &ItemConst) -> CustomBlock {
                                 }
                             }
                         },
-                        "category" => instance.category = extract_string(field),
-                        "spec" => instance.spec = extract_string(field),
+                        "category" => instance.category = extract_string(&field.expr),
+                        "spec" => instance.spec = extract_string(&field.expr),
                         "defaults" => {
                             // TODO
                         },
-                        "impl_fn" => instance.impl_fn = extract_string(field),
+                        "impl_fn" => instance.impl_fn = extract_string(&field.expr),
                         "target" => {},
                         _ => warn!("Unknown field: {}", name)
                     }
@@ -153,7 +165,7 @@ fn recreate_netsblox_extension_label_part(item: &ItemConst) -> LabelPart {
                 let name = named.to_string();
                 {
                     match name.as_str() {
-                        "spec" => instance.spec = extract_string(field),
+                        "spec" => instance.spec = extract_string(&field.expr),
                         _ => warn!("Unknown field: {}", name)
                     }
                 }
@@ -163,8 +175,8 @@ fn recreate_netsblox_extension_label_part(item: &ItemConst) -> LabelPart {
     instance
 }
 
-fn extract_string(field: &syn::FieldValue) -> &'static str {
-    if let Expr::Lit(lit) = &field.expr {
+fn extract_string(expr: &syn::Expr) -> &'static str {
+    if let Expr::Lit(lit) = expr {
         if let Lit::Str(val) = &lit.lit {
             let val = val.value();
             // Leaking would be bad, but this script has a short life
@@ -173,6 +185,17 @@ fn extract_string(field: &syn::FieldValue) -> &'static str {
     }
     
     return "";
+}
+
+
+fn extract_f64(expr: &syn::Expr) -> f64 {
+    if let Expr::Lit(lit) = expr {
+        if let Lit::Float(val) = &lit.lit {
+            return val.base10_parse().unwrap();
+        }
+    }
+    
+    0.0
 }
 
 pub fn build() -> Result<(), Box<dyn Error>>  {  
@@ -234,7 +257,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         let mut categories_string = "".to_string();
 
         for cat in custom_categories.values() {
-            categories_string += format!("\t\t\t\tnew Extension.Category('{}', new Color(195, 0, 204)),\n", cat.name).as_str();
+            categories_string += format!("\t\t\t\tnew Extension.Category('{}', new Color({}, {}, {})),\n", cat.name, cat.color.0, cat.color.1, cat.color.2).as_str();
         }
 
         content = content.replace("$CATEGORIES", &categories_string);
