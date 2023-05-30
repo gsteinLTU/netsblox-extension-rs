@@ -48,16 +48,16 @@
 				new Extension.PaletteCategory(
 					'Hello World',
 					[
-						new Extension.Palette.Block('logHelloName'),
 						new Extension.Palette.Block('logHelloWorld'),
+						new Extension.Palette.Block('logHelloName'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
 					'Hello World',
 					[
-						new Extension.Palette.Block('logHelloName'),
 						new Extension.Palette.Block('logHelloWorld'),
+						new Extension.Palette.Block('logHelloName'),
 					],
 					StageMorph
 				),
@@ -68,20 +68,20 @@
         getBlocks() {
             return [
 				new Extension.Block(
-					'logHelloName',
-					'command',
-					'Hello World',
-					'Log Hello %name',
-					[],
-					function (name) { return ExampleExtension_fns.hello_name(name); }
-				).for(SpriteMorph, StageMorph),
-				new Extension.Block(
 					'logHelloWorld',
 					'command',
 					'Hello World',
 					'Log Hello World!',
 					[],
 					function () { return ExampleExtension_fns.hello_world(); }
+				).for(SpriteMorph, StageMorph),
+				new Extension.Block(
+					'logHelloName',
+					'command',
+					'Hello World',
+					'Log Hello %name',
+					[],
+					function (name) { return ExampleExtension_fns.hello_name(name); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
 					'isEven',
@@ -106,23 +106,11 @@
         getLabelParts() {
             return [
 				new Extension.LabelPart(
-					'%text',
-					() => {
-						const part = new InputSlotMorph(
-							null, // text
-							false, // non-numeric
-							null,
-							false
-						);
-						return part;
-					}
-				),
-				new Extension.LabelPart(
 					'%num',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
-							false, // non-numeric
+							true, // is numeric
 							null,
 							false
 						);
@@ -134,7 +122,7 @@
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
-							false, // non-numeric
+							true, // is numeric
 							null,
 							false
 						);
@@ -146,7 +134,19 @@
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
-							false, // non-numeric
+							false, // is numeric
+							null,
+							false
+						);
+						return part;
+					}
+				),
+				new Extension.LabelPart(
+					'%text',
+					() => {
+						const part = new InputSlotMorph(
+							null, // text
+							false, // is numeric
 							null,
 							false
 						);

@@ -39,7 +39,7 @@ pub enum BlockType {
 #[derive(Debug, Clone, Copy, Default, Serialize)]
 pub struct InputSlotMorphOptions {
     pub text: Option<&'static str>,
-
+    pub is_numeric: bool
 }
 
 #[derive(Debug,Clone, Copy, Default, Serialize)]
@@ -150,17 +150,15 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
                         }
                     },
                     "target" => {
-                        warn!("{}", i)
+                        warn!("{:?}", arg)
                     },
                     _ => {}
                 }
             }
-            warn!("{:?}", arg);
         }   
     }
 
-    // Get information from function definiton
-    warn!("{:?}", item.sig);
+    // Get information from function signature
     instance.impl_fn = Box::leak(item.sig.ident.to_string().into_boxed_str());
     match &item.sig.output {
         syn::ReturnType::Default => instance.block_type = BlockType::Command,
@@ -194,6 +192,24 @@ fn recreate_netsblox_extension_label_part(item: &ItemConst) -> LabelPart {
                 {
                     match name.as_str() {
                         "spec" => instance.spec = extract_string(&field.expr),
+                        "slot_type" => {
+                            if let Expr::Struct(slot_type) = &field.expr {
+                                let mut slot_type_instance = InputSlotMorphOptions::default();
+
+                                for field in &slot_type.fields {
+
+                                    if let Member::Named(named) = &field.member { 
+                                        match named.to_string().as_str() {
+                                            "text" => slot_type_instance.text = Some(extract_string(&field.expr)),
+                                            "is_numeric" => slot_type_instance.is_numeric = extract_bool(&field.expr),
+                                            _ => warn!("Unknown input slot morph options field {}", named.to_string())
+                                        }
+                                    }
+                                }
+
+                                instance.slot_type = slot_type_instance;
+                            }
+                        },
                         _ => warn!("Unknown field: {}", name)
                     }
                 }
@@ -212,7 +228,17 @@ fn extract_string(expr: &syn::Expr) -> &'static str {
         }
     }
     
-    return "";
+    ""
+}
+
+fn extract_bool(expr: &syn::Expr) -> bool {
+    if let Expr::Lit(lit) = expr {
+        if let Lit::Bool(val) = &lit.lit {
+            return val.value;
+        }
+    }
+    
+    false
 }
 
 fn extract_f64(expr: &syn::Expr) -> f64 {
@@ -266,7 +292,6 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                 };
             }
         } else if let Item::Fn(f) = item  {
-            warn!("{:?}", f);
             // Check for attributes
             for attr in &f.attrs {
                 let seg = attr.meta.path().segments.first().unwrap() as &PathSegment;
@@ -391,7 +416,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             label_parts_string += "\t\t\t\t\t() => {\n";
             label_parts_string += "\t\t\t\t\t\tconst part = new InputSlotMorph(\n";
             label_parts_string += "\t\t\t\t\t\t\tnull, // text\n";
-            label_parts_string += "\t\t\t\t\t\t\tfalse, // non-numeric\n";
+            label_parts_string += format!("\t\t\t\t\t\t\t{}, // is numeric\n", label_part.slot_type.is_numeric).as_str();
             label_parts_string += "\t\t\t\t\t\t\tnull,\n";
             label_parts_string += "\t\t\t\t\t\t\tfalse\n";
             label_parts_string += "\t\t\t\t\t\t);\n";

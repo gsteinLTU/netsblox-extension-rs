@@ -36,7 +36,7 @@ pub fn hello_name(name: &str) {
 #[netsblox_extension_label_part]
 const LABEL_PART_TIMES: LabelPart = LabelPart {
     spec: "%times",
-    slot_type: InputSlotMorphOptions { text: Some("times") },
+    slot_type: InputSlotMorphOptions { text: Some("times"), is_numeric: true },
 };
 
 #[wasm_bindgen]
@@ -48,7 +48,7 @@ pub fn repeat_text(text: &str, times: f64) -> String {
 #[netsblox_extension_label_part]
 const LABEL_PART_NUM: LabelPart = LabelPart {
     spec: "%num",
-    slot_type: InputSlotMorphOptions { text: Some("num") },
+    slot_type: InputSlotMorphOptions { text: Some("num"), is_numeric: true },
 };
 
 #[wasm_bindgen]
