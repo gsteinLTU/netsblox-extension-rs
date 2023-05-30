@@ -365,7 +365,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                 c.iter().last().unwrap().unwrap().as_str()
             }).collect::<Vec<&str>>().join(", ");
 
-            blocks_str += format!("\t\t\t\t\tfunction ({}) {{ {}_fns.{}({}) }}\n", label_parts_str, extension_info.name, block.impl_fn, label_parts_str).as_str();
+            blocks_str += format!("\t\t\t\t\tfunction ({}) {{ return {}_fns.{}({}); }}\n", label_parts_str, extension_info.name, block.impl_fn, label_parts_str).as_str();
             blocks_str += "\t\t\t\t).for(SpriteMorph, StageMorph),\n";
         }
 

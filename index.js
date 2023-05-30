@@ -48,16 +48,16 @@
 				new Extension.PaletteCategory(
 					'operators',
 					[
-						new Extension.Palette.Block('isEven'),
 						new Extension.Palette.Block('repeatString'),
+						new Extension.Palette.Block('isEven'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
 					'operators',
 					[
-						new Extension.Palette.Block('isEven'),
 						new Extension.Palette.Block('repeatString'),
+						new Extension.Palette.Block('isEven'),
 					],
 					StageMorph
 				),
@@ -73,15 +73,7 @@
 					'Hello World',
 					'Log Hello World!',
 					[],
-					function () { ExampleExtension_fns.hello_world() }
-				).for(SpriteMorph, StageMorph),
-				new Extension.Block(
-					'isEven',
-					'predicate',
-					'operators',
-					'is %num even?',
-					[],
-					function (num) { ExampleExtension_fns.is_even(num) }
+					function () { return ExampleExtension_fns.hello_world(); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
 					'logHelloName',
@@ -89,7 +81,7 @@
 					'Hello World',
 					'Log Hello %name',
 					[],
-					function (name) { ExampleExtension_fns.hello_name(name) }
+					function (name) { return ExampleExtension_fns.hello_name(name); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
 					'repeatString',
@@ -97,7 +89,15 @@
 					'operators',
 					'Repeat %text for %times times',
 					[],
-					function (text, times) { ExampleExtension_fns.repeat_text(text, times) }
+					function (text, times) { return ExampleExtension_fns.repeat_text(text, times); }
+				).for(SpriteMorph, StageMorph),
+				new Extension.Block(
+					'isEven',
+					'predicate',
+					'operators',
+					'is %num even?',
+					[],
+					function (num) { return ExampleExtension_fns.is_even(num); }
 				).for(SpriteMorph, StageMorph),
 
             ];
@@ -105,30 +105,6 @@
 
         getLabelParts() {
             return [
-				new Extension.LabelPart(
-					'%name',
-					() => {
-						const part = new InputSlotMorph(
-							null, // text
-							false, // non-numeric
-							null,
-							false
-						);
-						return part;
-					}
-				),
-				new Extension.LabelPart(
-					'%text',
-					() => {
-						const part = new InputSlotMorph(
-							null, // text
-							false, // non-numeric
-							null,
-							false
-						);
-						return part;
-					}
-				),
 				new Extension.LabelPart(
 					'%times',
 					() => {
@@ -143,6 +119,30 @@
 				),
 				new Extension.LabelPart(
 					'%num',
+					() => {
+						const part = new InputSlotMorph(
+							null, // text
+							false, // non-numeric
+							null,
+							false
+						);
+						return part;
+					}
+				),
+				new Extension.LabelPart(
+					'%name',
+					() => {
+						const part = new InputSlotMorph(
+							null, // text
+							false, // non-numeric
+							null,
+							false
+						);
+						return part;
+					}
+				),
+				new Extension.LabelPart(
+					'%text',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
