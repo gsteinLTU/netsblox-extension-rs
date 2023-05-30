@@ -1,8 +1,9 @@
+use proc_macro2::{Ident, TokenTree};
 use serde::Serialize;
-use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::HashMap};
+use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::HashMap, fmt::Display};
 use regex::Regex;
 use simple_error::bail;
-use syn::{Item, PathSegment, ItemConst, Expr, Member, Lit};
+use syn::{Item, PathSegment, ItemConst, Expr, Member, Lit, ItemFn, Attribute, Meta};
 
 #[derive(Debug, Clone, Copy, Default, Serialize)]
 pub struct ExtensionInfo {
@@ -80,7 +81,6 @@ fn recreate_netsblox_extension_info(item: &ItemConst) -> ExtensionInfo {
     instance
 }
 
-
 // Turn syn item into instance
 fn recreate_netsblox_extension_custom_category(item: &ItemConst) -> CustomCategory {
     let mut instance = CustomCategory::default();
@@ -115,41 +115,69 @@ fn recreate_netsblox_extension_custom_category(item: &ItemConst) -> CustomCatego
 }
 
 // Turn syn item into instance
-fn recreate_netsblox_extension_block(item: &ItemConst) -> CustomBlock {
+fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomBlock {
     let mut instance = CustomBlock::default();
 
-    if let Expr::Struct(s) = &*item.expr {
-        for field in &s.fields {
-            if let Member::Named(named) = &field.member { 
-                
-                let name = named.to_string();
-                {
-                    match name.as_str() {
-                        "name" => instance.name = extract_string(&field.expr),
-                        "block_type" => {
-                            if let Expr::Path(p) = &field.expr {
-                                let block_type = &p.path.segments.last().unwrap().ident.to_string();
-                                match block_type.as_str() {
-                                    "Command" => instance.block_type = BlockType::Command,
-                                    "Reporter" => instance.block_type = BlockType::Reporter,
-                                    "Predicate" => instance.block_type = BlockType::Predicate,
-                                    _ => warn!("Unknown block type {}", block_type)
-                                }
-                            }
-                        },
-                        "category" => instance.category = extract_string(&field.expr),
-                        "spec" => instance.spec = extract_string(&field.expr),
-                        "defaults" => {
-                            // TODO
-                        },
-                        "impl_fn" => instance.impl_fn = extract_string(&field.expr),
-                        "target" => {},
-                        _ => warn!("Unknown field: {}", name)
-                    }
+    // Parse information stored in attribute
+    if let Meta::List(l) = &attr.meta {
+        let t = &l.tokens.clone().into_iter().collect::<Vec<_>>();
+
+        let args = t.split(|tt| {
+            if let TokenTree::Punct(p) = tt {
+                return p.as_char() == ','; 
+            }
+
+            false 
+        }).collect::<Vec<_>>();
+
+        for arg in args {
+            if let TokenTree::Ident(i) = arg.first().unwrap() {
+                let sym = i.to_string();
+                match sym.as_str() {
+                    "name" => {
+                        if let TokenTree::Literal(lit) = &arg[2] {
+                            instance.name = Box::leak(lit.to_string().replace("\"", "").into_boxed_str());
+                        }
+                    },
+                    "category" => {
+                        if let TokenTree::Literal(lit) = &arg[2] {
+                            instance.category = Box::leak(lit.to_string().replace("\"", "").into_boxed_str());
+                        }
+                    },
+                    "spec" => {
+                        if let TokenTree::Literal(lit) = &arg[2] {
+                            instance.spec = Box::leak(lit.to_string().replace("\"", "").into_boxed_str());
+                        }
+                    },
+                    "target" => {
+                        warn!("{}", i)
+                    },
+                    _ => {}
                 }
             }
-        }
+            warn!("{:?}", arg);
+        }   
     }
+
+    // Get information from function definiton
+    warn!("{:?}", item.sig);
+    instance.impl_fn = Box::leak(item.sig.ident.to_string().into_boxed_str());
+    match &item.sig.output {
+        syn::ReturnType::Default => instance.block_type = BlockType::Command,
+        syn::ReturnType::Type(_, b) => {
+            match b.as_ref() {
+                syn::Type::Path(p) => {
+                    if &p.path.segments.first().unwrap().ident.to_string() == "bool" {
+                        instance.block_type = BlockType::Predicate
+                    } else {
+                        instance.block_type = BlockType::Reporter
+                    }
+                },
+                _ => instance.block_type = BlockType::Reporter
+            }
+        },
+    }
+
     instance
 }
 
@@ -187,7 +215,6 @@ fn extract_string(expr: &syn::Expr) -> &'static str {
     return "";
 }
 
-
 fn extract_f64(expr: &syn::Expr) -> f64 {
     if let Expr::Lit(lit) = expr {
         if let Lit::Float(val) = &lit.lit {
@@ -198,7 +225,7 @@ fn extract_f64(expr: &syn::Expr) -> f64 {
     0.0
 }
 
-pub fn build() -> Result<(), Box<dyn Error>>  {  
+pub fn build() -> Result<(), Box<dyn Error>>  {
     // Read file  
     let mut file = File::open("./src/lib.rs")?;
     let mut content = String::new();
@@ -224,12 +251,6 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                     "netsblox_extension_info" => {
                         extension_info = Some(recreate_netsblox_extension_info(&c));
                         warn!("Found extension info {:?}", extension_info);
-                    }
-                    "netsblox_extension_block" => {
-                        let block = recreate_netsblox_extension_block(&c);
-                        warn!("Found custom block {:?}", block);
-                        custom_blocks.insert(block.name.to_string(), block.clone());
-                        fn_names.push(block.impl_fn.to_string());
                     },
                     "netsblox_extension_label_part" => {
                         let label_part = recreate_netsblox_extension_label_part(&c);
@@ -244,6 +265,28 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                     _ => {}
                 };
             }
+        } else if let Item::Fn(f) = item  {
+            warn!("{:?}", f);
+            // Check for attributes
+            for attr in &f.attrs {
+                let seg = attr.meta.path().segments.first().unwrap() as &PathSegment;
+                let ident = seg.ident.to_string();
+
+                match ident.as_str() {
+                    "netsblox_extension_block" => {
+                        let block = recreate_netsblox_extension_block(&f, attr);
+
+                        if block.name.len() > 0 {
+                            warn!("Found custom block {:?}", block);
+                            custom_blocks.insert(block.name.to_string(), block.clone());
+                            fn_names.push(block.impl_fn.to_string());
+                        } else {
+                            warn!("Invalid custom block found");
+                        }
+                    },
+                    _ => {}
+                }
+            }            
         }
     }
 

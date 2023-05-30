@@ -16,28 +16,6 @@ const INFO: ExtensionInfo = ExtensionInfo {
     name: "ExampleExtension" 
 };
 
-#[netsblox_extension_block]
-const LOG_HELLO_WORLD: CustomBlock = CustomBlock { 
-    name: "logHelloWorld", 
-    block_type: BlockType::Command, 
-    category: "Hello World", 
-    spec: "Log Hello World!", 
-    defaults: vec![], 
-    impl_fn: "hello_world",
-    target: netsblox_extension_util::TargetObject::Both
-};
-
-#[netsblox_extension_block]
-const LOG_HELLO_NAME: CustomBlock = CustomBlock { 
-    name: "logHelloName", 
-    block_type: BlockType::Command, 
-    category: "Hello World", 
-    spec: "Log Hello %name", 
-    defaults: vec![], 
-    impl_fn: "hello_name",
-    target: netsblox_extension_util::TargetObject::Both
-};
-
 #[netsblox_extension_label_part]
 const LABEL_PART_NAME: LabelPart = LabelPart {
     spec: "%name",
@@ -50,11 +28,44 @@ pub fn main() {
 }
 
 #[wasm_bindgen]
+#[netsblox_extension_block(name = "logHelloWorld", category = "Hello World", spec = "Log Hello World!", target = netsblox_extension_util::TargetObject::Both)]
 pub fn hello_world() {
     console::log_1(&"Hello World!".to_owned().into());
 }
 
 #[wasm_bindgen]
+#[netsblox_extension_block(name = "logHelloName", category = "Hello World", spec = "Log Hello %name", target = netsblox_extension_util::TargetObject::Both)]
 pub fn hello_name(name: &str) {
     console::log_1(&format!("Hello {}!", name).to_owned().into());
+}
+
+
+#[netsblox_extension_label_part]
+const LABEL_PART_TEXT: LabelPart = LabelPart {
+    spec: "%text",
+    slot_type: InputSlotMorphOptions { text: Some("text") },
+};
+
+#[netsblox_extension_label_part]
+const LABEL_PART_TIMES: LabelPart = LabelPart {
+    spec: "%times",
+    slot_type: InputSlotMorphOptions { text: Some("times") },
+};
+
+#[wasm_bindgen]
+#[netsblox_extension_block(name = "repeatString", category = "operators", spec = "Repeat %text for %times times", target = netsblox_extension_util::TargetObject::Both)]
+pub fn repeat_text(text: &str, times: f64) -> String {
+    text.repeat(times as usize)
+}
+
+#[netsblox_extension_label_part]
+const LABEL_PART_NUM: LabelPart = LabelPart {
+    spec: "%num",
+    slot_type: InputSlotMorphOptions { text: Some("num") },
+};
+
+#[wasm_bindgen]
+#[netsblox_extension_block(name = "isEven", category = "operators", spec = "is %num even?", target = netsblox_extension_util::TargetObject::Both)]
+pub fn is_even(num: f64) -> bool {
+    num as usize % 2 == 0
 }
