@@ -30,34 +30,34 @@
         getPalette() {
             return [
 				new Extension.PaletteCategory(
-					'Hello World',
+					'operators',
 					[
-						new Extension.Palette.Block('logHelloWorld'),
-						new Extension.Palette.Block('logHelloName'),
+						new Extension.Palette.Block('isEven'),
+						new Extension.Palette.Block('repeatString'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
-					'Hello World',
+					'operators',
 					[
-						new Extension.Palette.Block('logHelloWorld'),
-						new Extension.Palette.Block('logHelloName'),
+						new Extension.Palette.Block('isEven'),
+						new Extension.Palette.Block('repeatString'),
 					],
 					StageMorph
 				),
 				new Extension.PaletteCategory(
-					'operators',
+					'Hello World',
 					[
-						new Extension.Palette.Block('repeatString'),
-						new Extension.Palette.Block('isEven'),
+						new Extension.Palette.Block('logHelloName'),
+						new Extension.Palette.Block('logHelloWorld'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
-					'operators',
+					'Hello World',
 					[
-						new Extension.Palette.Block('repeatString'),
-						new Extension.Palette.Block('isEven'),
+						new Extension.Palette.Block('logHelloName'),
+						new Extension.Palette.Block('logHelloWorld'),
 					],
 					StageMorph
 				),
@@ -68,14 +68,6 @@
         getBlocks() {
             return [
 				new Extension.Block(
-					'logHelloWorld',
-					'command',
-					'Hello World',
-					'Log Hello World!',
-					[],
-					function () { return ExampleExtension_fns.hello_world(); }
-				).for(SpriteMorph, StageMorph),
-				new Extension.Block(
 					'logHelloName',
 					'command',
 					'Hello World',
@@ -84,12 +76,12 @@
 					function (name) { return ExampleExtension_fns.hello_name(name); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
-					'repeatString',
-					'reporter',
-					'operators',
-					'Repeat %text for %times times',
+					'logHelloWorld',
+					'command',
+					'Hello World',
+					'Log Hello World!',
 					[],
-					function (text, times) { return ExampleExtension_fns.repeat_text(text, times); }
+					function () { return ExampleExtension_fns.hello_world(); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
 					'isEven',
@@ -99,6 +91,14 @@
 					[],
 					function (num) { return ExampleExtension_fns.is_even(num); }
 				).for(SpriteMorph, StageMorph),
+				new Extension.Block(
+					'repeatString',
+					'reporter',
+					'operators',
+					'Repeat %text for %times times',
+					[],
+					function (text, times) { return ExampleExtension_fns.repeat_text(text, times); }
+				).for(SpriteMorph, StageMorph),
 
             ];
         }
@@ -106,7 +106,7 @@
         getLabelParts() {
             return [
 				new Extension.LabelPart(
-					'%times',
+					'%text',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
@@ -130,7 +130,7 @@
 					}
 				),
 				new Extension.LabelPart(
-					'%name',
+					'%times',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
@@ -142,7 +142,7 @@
 					}
 				),
 				new Extension.LabelPart(
-					'%text',
+					'%name',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text

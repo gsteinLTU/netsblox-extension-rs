@@ -367,6 +367,18 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
             blocks_str += format!("\t\t\t\t\tfunction ({}) {{ return {}_fns.{}({}); }}\n", label_parts_str, extension_info.name, block.impl_fn, label_parts_str).as_str();
             blocks_str += "\t\t\t\t).for(SpriteMorph, StageMorph),\n";
+
+            // Add default label parts
+            for label_part in Regex::new("%\\w+").unwrap().find_iter(block.spec) {
+                let label_part = label_part.as_str();
+
+                if !label_parts.contains_key(label_part) {
+                    label_parts.insert(label_part.to_string(), LabelPart { 
+                        spec: label_part.clone(), 
+                        slot_type: InputSlotMorphOptions::default() 
+                    });
+                }
+            }
         }
 
         content = content.replace("$BLOCKS", blocks_str.as_str());

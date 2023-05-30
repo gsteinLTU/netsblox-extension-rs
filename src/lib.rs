@@ -16,12 +16,6 @@ const INFO: ExtensionInfo = ExtensionInfo {
     name: "ExampleExtension" 
 };
 
-#[netsblox_extension_label_part]
-const LABEL_PART_NAME: LabelPart = LabelPart {
-    spec: "%name",
-    slot_type: InputSlotMorphOptions { text: Some("name") },
-};
-
 #[wasm_bindgen(start)]
 pub fn main() {
     console::log_1(&"Hello from Rust!".to_owned().into());
@@ -38,13 +32,6 @@ pub fn hello_world() {
 pub fn hello_name(name: &str) {
     console::log_1(&format!("Hello {}!", name).to_owned().into());
 }
-
-
-#[netsblox_extension_label_part]
-const LABEL_PART_TEXT: LabelPart = LabelPart {
-    spec: "%text",
-    slot_type: InputSlotMorphOptions { text: Some("text") },
-};
 
 #[netsblox_extension_label_part]
 const LABEL_PART_TIMES: LabelPart = LabelPart {
