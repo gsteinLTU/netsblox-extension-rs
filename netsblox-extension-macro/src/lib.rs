@@ -19,3 +19,13 @@ pub fn netsblox_extension_label_part(_attr: TokenStream, item: TokenStream) -> T
 pub fn netsblox_extension_category(_attr: TokenStream, item: TokenStream) -> TokenStream {
     item
 }
+
+#[proc_macro_attribute]
+pub fn netsblox_extension_menu_item(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    item
+}
+
+#[proc_macro_attribute]
+pub fn netsblox_extension_setting(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    item
+}

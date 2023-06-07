@@ -1,6 +1,6 @@
-use proc_macro2::{Ident, TokenTree};
+use proc_macro2::{TokenTree};
 use serde::Serialize;
-use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::HashMap, fmt::Display};
+use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::{HashMap, HashSet}};
 use regex::Regex;
 use simple_error::bail;
 use syn::{Item, PathSegment, ItemConst, Expr, Member, Lit, ItemFn, Attribute, Meta};
@@ -136,17 +136,17 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
                 match sym.as_str() {
                     "name" => {
                         if let TokenTree::Literal(lit) = &arg[2] {
-                            instance.name = Box::leak(lit.to_string().replace("\"", "").into_boxed_str());
+                            instance.name = Box::leak(lit.to_string().replace('"', "").into_boxed_str());
                         }
                     },
                     "category" => {
                         if let TokenTree::Literal(lit) = &arg[2] {
-                            instance.category = Box::leak(lit.to_string().replace("\"", "").into_boxed_str());
+                            instance.category = Box::leak(lit.to_string().replace('"', "").into_boxed_str());
                         }
                     },
                     "spec" => {
                         if let TokenTree::Literal(lit) = &arg[2] {
-                            instance.spec = Box::leak(lit.to_string().replace("\"", "").into_boxed_str());
+                            instance.spec = Box::leak(lit.to_string().replace('"', "").into_boxed_str());
                         }
                     },
                     "target" => {
@@ -262,7 +262,8 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
     let mut custom_blocks: HashMap<String, CustomBlock> = HashMap::new();
     let mut label_parts: HashMap<String, LabelPart> = HashMap::new();
     let mut custom_categories: HashMap<String, CustomCategory> = HashMap::new();
-    let mut fn_names: Vec<String> = vec![];
+    let mut menu_items: HashMap<String, String> = HashMap::new();
+    let mut fn_names: HashSet<String> = HashSet::new();
 
     // Parse all items
     for item in ast.items {
@@ -301,12 +302,34 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                     "netsblox_extension_block" => {
                         let block = recreate_netsblox_extension_block(&f, attr);
 
-                        if block.name.len() > 0 {
+                        if !block.name.is_empty() {
                             warn!("Found custom block {:?}", block);
                             custom_blocks.insert(block.name.to_string(), block.clone());
-                            fn_names.push(block.impl_fn.to_string());
+                            fn_names.insert(block.impl_fn.to_string());
                         } else {
                             warn!("Invalid custom block found");
+                        }
+                    },
+                    "netsblox_extension_menu_item" => {
+                        let fn_name = Box::leak(f.sig.ident.to_string().into_boxed_str());
+                        
+                        if let Meta::List(l) = &attr.meta {
+                            let t = &l.tokens.clone().into_iter().collect::<Vec<_>>();
+                            
+                            let args = t.split(|tt| {
+                                if let TokenTree::Punct(p) = tt {
+                                    return p.as_char() == ','; 
+                                }
+                    
+                                false 
+                            }).collect::<Vec<_>>();
+                            
+                            if let Some(arg) = args.first() {
+                                let menu_text = arg.first().unwrap().to_string().replace('"', "");
+                                warn!("Found menu item {} for fn {}", menu_text, fn_name);
+                                menu_items.insert(menu_text, fn_name.to_string());
+                                fn_names.insert(fn_name.to_string());
+                            }
                         }
                     },
                     _ => {}
@@ -319,7 +342,15 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         let mut content = include_str!("./template.js").to_string();
 
         content = content.replace("$EXTENSION_NAME", extension_info.name);
-        content = content.replace("$MENU", "");
+
+        let mut menu_string = "".to_string();
+
+        for (label, fn_name) in menu_items {
+            menu_string += format!("\t\t\t\t'{}': window.{}_fns.{},\n", label, extension_info.name, fn_name).as_str();
+        }
+
+        content = content.replace("$MENU", &menu_string);
+
         content = content.replace("$SETTINGS", "");
         
         let mut categories_string = "".to_string();
@@ -335,7 +366,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         let mut categories_map: HashMap<String, Vec<String>> = HashMap::new();
 
         for block in custom_blocks.values() {
-            let block_cat = serde_json::to_string(&block.category)?.strip_prefix("\"").unwrap().strip_suffix("\"").unwrap().to_string();
+            let block_cat = serde_json::to_string(&block.category)?.strip_prefix('\"').unwrap().strip_suffix('\"').unwrap().to_string();
 
             if !categories_map.contains_key(&block_cat) {
                 categories_map.insert(block_cat.clone(), vec![]);
@@ -427,7 +458,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
         content = content.replace("$LABELPARTS", &label_parts_string);
 
-        content = content.replace("$IMPORTS_LIST", &fn_names.join(", "));
+        content = content.replace("$IMPORTS_LIST", &fn_names.iter().map(|s| s.to_owned()).collect::<Vec<String>>().join(", "));
         content = content.replace("$WINDOW_IMPORTS", &fn_names.iter().map(|fn_name| format!("\t\twindow.{}_fns.{} = {};", extension_info.name, fn_name, fn_name)).collect::<Vec<String>>().join("\n"));
         
 

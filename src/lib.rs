@@ -56,3 +56,9 @@ const LABEL_PART_NUM: LabelPart = LabelPart {
 pub fn is_even(num: f64) -> bool {
     num as usize % 2 == 0
 }
+
+#[wasm_bindgen]
+#[netsblox_extension_menu_item("Print Extension Name")]
+pub fn print_extension_name() {
+    console::log_1(&INFO.name.to_owned().into());
+}
