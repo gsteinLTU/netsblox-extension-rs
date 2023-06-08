@@ -15,7 +15,7 @@ const HELLO_WORLD_CATEGORY: CustomCategory = CustomCategory {
 
 #[netsblox_extension_info]
 const INFO: ExtensionInfo = ExtensionInfo { 
-    name: "ExampleExtension" 
+    name: "Example Extension" 
 };
 
 #[netsblox_extension_setting]

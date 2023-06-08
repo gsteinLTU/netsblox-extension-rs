@@ -3,7 +3,7 @@
  */
 
 (function () {    
-    class $EXTENSION_NAME extends Extension {
+    class $NO_SPACE_EXTENSION_NAME extends Extension {
         constructor(ide) {
             super('$EXTENSION_NAME');
         }
@@ -50,7 +50,7 @@ $LABELPARTS
 
     }
 
-    NetsBloxExtensions.register($EXTENSION_NAME);
+    NetsBloxExtensions.register($NO_SPACE_EXTENSION_NAME);
     let path = document.currentScript.src;
     path = path.substring(0, path.lastIndexOf("/"));
     var s = document.createElement('script');
@@ -60,7 +60,7 @@ $LABELPARTS
     
         await init();
 
-        window.$EXTENSION_NAME_fns = {};
+        window.$NO_SPACE_EXTENSION_NAME_fns = {};
 $WINDOW_IMPORTS
         `;
     document.body.appendChild(s);

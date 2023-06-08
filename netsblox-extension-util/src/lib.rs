@@ -397,11 +397,13 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         let mut content = include_str!("./template.js").to_string();
 
         content = content.replace("$EXTENSION_NAME", extension_info.name);
+        let extension_name_no_spaces = extension_info.name.replace(" ", "");
+        content = content.replace("$NO_SPACE_EXTENSION_NAME", extension_name_no_spaces.as_str());
 
         let mut menu_string = "".to_string();
 
         for (label, fn_name) in menu_items {
-            menu_string += format!("\t\t\t\t'{}': window.{}_fns.{},\n", label, extension_info.name, fn_name).as_str();
+            menu_string += format!("\t\t\t\t'{}': window.{}_fns.{},\n", label, extension_name_no_spaces.as_str(), fn_name).as_str();
         }
 
         content = content.replace("$MENU", &menu_string);
@@ -482,7 +484,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                 c.iter().last().unwrap().unwrap().as_str()
             }).collect::<Vec<&str>>().join(", ");
 
-            blocks_str += format!("\t\t\t\t\tfunction ({}) {{ return {}_fns.{}({}); }}\n", label_parts_str, extension_info.name, block.impl_fn, label_parts_str).as_str();
+            blocks_str += format!("\t\t\t\t\tfunction ({}) {{ return {}_fns.{}({}); }}\n", label_parts_str, extension_name_no_spaces.as_str(), block.impl_fn, label_parts_str).as_str();
             blocks_str += "\t\t\t\t).for(SpriteMorph, StageMorph),\n";
 
             // Add default label parts
@@ -520,7 +522,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         content = content.replace("$LABELPARTS", &label_parts_string);
 
         content = content.replace("$IMPORTS_LIST", &fn_names.iter().map(|s| s.to_owned()).collect::<Vec<String>>().join(", "));
-        content = content.replace("$WINDOW_IMPORTS", &fn_names.iter().map(|fn_name| format!("\t\twindow.{}_fns.{} = {};", extension_info.name, fn_name, fn_name)).collect::<Vec<String>>().join("\n"));
+        content = content.replace("$WINDOW_IMPORTS", &fn_names.iter().map(|fn_name| format!("\t\twindow.{}_fns.{} = {};", extension_name_no_spaces.as_str(), fn_name, fn_name)).collect::<Vec<String>>().join("\n"));
         
 
         let mut out_file = File::create("./index.js")?;
