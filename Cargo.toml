@@ -3,6 +3,9 @@ name = "netsblox-extension-rs"
 version = "0.1.0"
 edition = "2021"
 authors = ["Gordon Stein"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+homepage = "https://github.com/gsteinLTU/netsblox-extension-rs"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

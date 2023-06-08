@@ -5,6 +5,8 @@ edition = "2021"
 authors = ["Gordon Stein"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
+homepage = "https://github.com/gsteinLTU/netsblox-extension-rs"
+description = "Macros used by netsblox-extension-util"
 
 [lib]
 proc-macro = true
