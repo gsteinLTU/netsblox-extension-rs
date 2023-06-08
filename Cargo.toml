@@ -12,6 +12,7 @@ wasm-bindgen = "0.2.86"
 web-sys = { version = "0.3.63", features = ["console"] }
 netsblox-extension-macro = { path = "./netsblox-extension-macro" }
 netsblox-extension-util = { path = "./netsblox-extension-util" }
+console_error_panic_hook = "0.1.7"
 
 [build-dependencies]
 netsblox-extension-util = { path = "./netsblox-extension-util" }

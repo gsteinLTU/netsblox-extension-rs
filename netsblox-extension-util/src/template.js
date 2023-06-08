@@ -1,3 +1,7 @@
+/**
+ * The following file is generated through a build script. Manually modifying it is an at-your-own-risk activity and your changes will likely be overridden.
+ */
+
 (function () {    
     class $EXTENSION_NAME extends Extension {
         constructor(ide) {

@@ -54,6 +54,30 @@ pub struct CustomCategory {
     pub color: (f64, f64, f64)
 }
 
+#[derive(Debug, Clone, Copy, Default, Serialize)]
+pub struct ExtensionSetting {
+    pub name: &'static str,
+    pub id: &'static str,
+    pub default_value: bool,
+    pub on_hint: &'static str,
+    pub off_hint: &'static str,
+    pub hidden: bool
+}
+
+impl ExtensionSetting {
+    pub fn get(&self) -> bool {
+        let window = &web_sys::window().unwrap();
+        let storage = window.local_storage().unwrap().unwrap();
+        storage.get_item(self.id).unwrap().unwrap_or(if self.default_value { "true".to_string() } else { "false".to_string()} ) == "true"
+    }
+
+    pub fn set(&self, val: bool) {
+        let window = web_sys::window();
+        let local_storage = window.unwrap().local_storage().unwrap().unwrap();
+        local_storage.set_item(self.id, if val {"true"} else {"false"}).unwrap();
+    }
+}
+
 // Macro to allow build script to print output
 macro_rules! warn {
     ($($tokens: tt)*) => {
@@ -150,7 +174,8 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
                         }
                     },
                     "target" => {
-                        warn!("{:?}", arg)
+                        // For now, defaults to targetting both until we have a use-case justifying it, the library doesn't support enough NetsBlox interaction to make sprites vs stage meaningful yet
+                        //warn!("{:?}", arg)
                     },
                     _ => {}
                 }
@@ -219,6 +244,30 @@ fn recreate_netsblox_extension_label_part(item: &ItemConst) -> LabelPart {
     instance
 }
 
+fn recreate_netsblox_extension_setting(item: &ItemConst) -> ExtensionSetting {
+    let mut instance = ExtensionSetting::default();
+
+    if let Expr::Struct(s) = &*item.expr {
+        for field in &s.fields {
+            if let Member::Named(named) = &field.member { 
+                let name = named.to_string();
+                {
+                    match name.as_str() {
+                        "name" => instance.name = extract_string(&field.expr),
+                        "id" => instance.id = extract_string(&field.expr),
+                        "on_hint" => instance.on_hint = extract_string(&field.expr),
+                        "off_hint" => instance.off_hint = extract_string(&field.expr),
+                        "default_value" => instance.default_value = extract_bool(&field.expr),
+                        "hidden" => instance.hidden = extract_bool(&field.expr),
+                        _ => warn!("Unknown field: {}", name) 
+                    }
+                }
+            }
+        }
+    }
+    instance
+}
+
 fn extract_string(expr: &syn::Expr) -> &'static str {
     if let Expr::Lit(lit) = expr {
         if let Lit::Str(val) = &lit.lit {
@@ -263,6 +312,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
     let mut label_parts: HashMap<String, LabelPart> = HashMap::new();
     let mut custom_categories: HashMap<String, CustomCategory> = HashMap::new();
     let mut menu_items: HashMap<String, String> = HashMap::new();
+    let mut settings: Vec<ExtensionSetting> = vec![];
     let mut fn_names: HashSet<String> = HashSet::new();
 
     // Parse all items
@@ -288,6 +338,11 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                         let category = recreate_netsblox_extension_custom_category(&c);
                         warn!("Found custom category {:?}", category);
                         custom_categories.insert(category.name.to_string(), category);
+                    },
+                    "netsblox_extension_setting" => {
+                        let setting: ExtensionSetting = recreate_netsblox_extension_setting(&c);
+                        warn!("Found setting {}", setting.name);
+                        settings.push(setting);
                     },
                     _ => {}
                 };
@@ -351,7 +406,13 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
         content = content.replace("$MENU", &menu_string);
 
-        content = content.replace("$SETTINGS", "");
+        let mut settings_string = "".to_string();
+
+        for setting in settings {
+            settings_string += format!("\t\t\t\tExtension.ExtensionSetting.createFromLocalStorage('{}', '{}', {}, '{}', '{}', {})\n", setting.name, setting.id, setting.default_value, setting.on_hint, setting.off_hint, setting.hidden).as_str();
+        }
+
+        content = content.replace("$SETTINGS", &settings_string);
         
         let mut categories_string = "".to_string();
 

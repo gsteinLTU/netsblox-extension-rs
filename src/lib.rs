@@ -4,6 +4,8 @@ use netsblox_extension_macro::*;
 use netsblox_extension_util::*;
 use wasm_bindgen::prelude::wasm_bindgen;
 use web_sys::console;
+extern crate console_error_panic_hook;
+use std::panic;
 
 #[netsblox_extension_category]
 const HELLO_WORLD_CATEGORY: CustomCategory = CustomCategory {
@@ -16,8 +18,19 @@ const INFO: ExtensionInfo = ExtensionInfo {
     name: "ExampleExtension" 
 };
 
+#[netsblox_extension_setting]
+const CAPS_SETTING: ExtensionSetting = ExtensionSetting {
+    name: "All Caps output from Menu Item",
+    id: "exampleextensionallcaps",
+    default_value: false,
+    on_hint: "Capitalize Print Extension name output",
+    off_hint: "Do not capitalize Print Extension name output",
+    hidden: false,
+};
+
 #[wasm_bindgen(start)]
 pub fn main() {
+    panic::set_hook(Box::new(console_error_panic_hook::hook));
     console::log_1(&"Hello from Rust!".to_owned().into());
 }
 
@@ -60,5 +73,9 @@ pub fn is_even(num: f64) -> bool {
 #[wasm_bindgen]
 #[netsblox_extension_menu_item("Print Extension Name")]
 pub fn print_extension_name() {
-    console::log_1(&INFO.name.to_owned().into());
+    if CAPS_SETTING.get() {
+        console::log_1(&INFO.name.to_owned().to_uppercase().into());
+    } else {
+        console::log_1(&INFO.name.to_owned().into());
+    }
 }

@@ -1,3 +1,7 @@
+/**
+ * The following file is generated through a build script. Manually modifying it is an at-your-own-risk activity and your changes will likely be overridden.
+ */
+
 (function () {    
     class ExampleExtension extends Extension {
         constructor(ide) {
@@ -10,6 +14,7 @@
 
         getSettings() {
             return [
+				Extension.ExtensionSetting.createFromLocalStorage('All Caps output from Menu Item', 'exampleextensionallcaps', false, 'Capitalize Print Extension name output', 'Do not capitalize Print Extension name output', false)
 
             ];
         }
@@ -33,16 +38,16 @@
 				new Extension.PaletteCategory(
 					'Hello World',
 					[
-						new Extension.Palette.Block('logHelloName'),
 						new Extension.Palette.Block('logHelloWorld'),
+						new Extension.Palette.Block('logHelloName'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
 					'Hello World',
 					[
-						new Extension.Palette.Block('logHelloName'),
 						new Extension.Palette.Block('logHelloWorld'),
+						new Extension.Palette.Block('logHelloName'),
 					],
 					StageMorph
 				),
@@ -69,20 +74,20 @@
         getBlocks() {
             return [
 				new Extension.Block(
+					'logHelloWorld',
+					'command',
+					'Hello World',
+					'Log Hello World!',
+					[],
+					function () { return ExampleExtension_fns.hello_world(); }
+				).for(SpriteMorph, StageMorph),
+				new Extension.Block(
 					'repeatString',
 					'reporter',
 					'operators',
 					'Repeat %text for %times times',
 					[],
 					function (text, times) { return ExampleExtension_fns.repeat_text(text, times); }
-				).for(SpriteMorph, StageMorph),
-				new Extension.Block(
-					'isEven',
-					'predicate',
-					'operators',
-					'is %num even?',
-					[],
-					function (num) { return ExampleExtension_fns.is_even(num); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
 					'logHelloName',
@@ -93,12 +98,12 @@
 					function (name) { return ExampleExtension_fns.hello_name(name); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
-					'logHelloWorld',
-					'command',
-					'Hello World',
-					'Log Hello World!',
+					'isEven',
+					'predicate',
+					'operators',
+					'is %num even?',
 					[],
-					function () { return ExampleExtension_fns.hello_world(); }
+					function (num) { return ExampleExtension_fns.is_even(num); }
 				).for(SpriteMorph, StageMorph),
 
             ];
@@ -107,11 +112,11 @@
         getLabelParts() {
             return [
 				new Extension.LabelPart(
-					'%name',
+					'%times',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
-							false, // is numeric
+							true, // is numeric
 							null,
 							false
 						);
@@ -143,11 +148,11 @@
 					}
 				),
 				new Extension.LabelPart(
-					'%times',
+					'%name',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
-							true, // is numeric
+							false, // is numeric
 							null,
 							false
 						);
@@ -165,15 +170,15 @@
     path = path.substring(0, path.lastIndexOf("/"));
     var s = document.createElement('script');
     s.type = "module";
-    s.innerHTML = `import init, {hello_world, hello_name, print_extension_name, is_even, repeat_text} from '${path}/pkg/netsblox_extension_rs.js';
+    s.innerHTML = `import init, {print_extension_name, hello_name, hello_world, is_even, repeat_text} from '${path}/pkg/netsblox_extension_rs.js';
     
     
         await init();
 
         window.ExampleExtension_fns = {};
-		window.ExampleExtension_fns.hello_world = hello_world;
-		window.ExampleExtension_fns.hello_name = hello_name;
 		window.ExampleExtension_fns.print_extension_name = print_extension_name;
+		window.ExampleExtension_fns.hello_name = hello_name;
+		window.ExampleExtension_fns.hello_world = hello_world;
 		window.ExampleExtension_fns.is_even = is_even;
 		window.ExampleExtension_fns.repeat_text = repeat_text;
         `;
