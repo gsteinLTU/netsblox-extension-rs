@@ -38,32 +38,32 @@
 				new Extension.PaletteCategory(
 					'Hello World',
 					[
-						new Extension.Palette.Block('logHelloWorld'),
 						new Extension.Palette.Block('logHelloName'),
+						new Extension.Palette.Block('logHelloWorld'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
 					'Hello World',
 					[
-						new Extension.Palette.Block('logHelloWorld'),
 						new Extension.Palette.Block('logHelloName'),
+						new Extension.Palette.Block('logHelloWorld'),
 					],
 					StageMorph
 				),
 				new Extension.PaletteCategory(
 					'operators',
 					[
-						new Extension.Palette.Block('repeatString'),
 						new Extension.Palette.Block('isEven'),
+						new Extension.Palette.Block('repeatString'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
 					'operators',
 					[
-						new Extension.Palette.Block('repeatString'),
 						new Extension.Palette.Block('isEven'),
+						new Extension.Palette.Block('repeatString'),
 					],
 					StageMorph
 				),
@@ -74,12 +74,12 @@
         getBlocks() {
             return [
 				new Extension.Block(
-					'logHelloWorld',
-					'command',
-					'Hello World',
-					'Log Hello World!',
+					'isEven',
+					'predicate',
+					'operators',
+					'is %num even?',
 					[],
-					function () { return ExampleExtension_fns.hello_world(); }
+					function (num) { return ExampleExtension_fns.is_even(num); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
 					'repeatString',
@@ -98,12 +98,12 @@
 					function (name) { return ExampleExtension_fns.hello_name(name); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
-					'isEven',
-					'predicate',
-					'operators',
-					'is %num even?',
+					'logHelloWorld',
+					'command',
+					'Hello World',
+					'Log Hello World!',
 					[],
-					function (num) { return ExampleExtension_fns.is_even(num); }
+					function () { return ExampleExtension_fns.hello_world(); }
 				).for(SpriteMorph, StageMorph),
 
             ];
@@ -112,7 +112,7 @@
         getLabelParts() {
             return [
 				new Extension.LabelPart(
-					'%times',
+					'%num',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
@@ -124,7 +124,7 @@
 					}
 				),
 				new Extension.LabelPart(
-					'%num',
+					'%times',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
@@ -170,17 +170,17 @@
     path = path.substring(0, path.lastIndexOf("/"));
     var s = document.createElement('script');
     s.type = "module";
-    s.innerHTML = `import init, {print_extension_name, hello_name, hello_world, is_even, repeat_text} from '${path}/pkg/netsblox_extension_rs.js';
+    s.innerHTML = `import init, {hello_name, repeat_text, is_even, print_extension_name, hello_world} from '${path}/pkg/netsblox_extension_rs.js';
     
     
         await init();
 
         window.ExampleExtension_fns = {};
-		window.ExampleExtension_fns.print_extension_name = print_extension_name;
 		window.ExampleExtension_fns.hello_name = hello_name;
-		window.ExampleExtension_fns.hello_world = hello_world;
-		window.ExampleExtension_fns.is_even = is_even;
 		window.ExampleExtension_fns.repeat_text = repeat_text;
+		window.ExampleExtension_fns.is_even = is_even;
+		window.ExampleExtension_fns.print_extension_name = print_extension_name;
+		window.ExampleExtension_fns.hello_world = hello_world;
         `;
     document.body.appendChild(s);
 })();
