@@ -36,34 +36,34 @@
         getPalette() {
             return [
 				new Extension.PaletteCategory(
-					'Hello World',
+					'operators',
 					[
-						new Extension.Palette.Block('logHelloName'),
-						new Extension.Palette.Block('logHelloWorld'),
+						new Extension.Palette.Block('repeatString'),
+						new Extension.Palette.Block('isEven'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
-					'Hello World',
+					'operators',
 					[
-						new Extension.Palette.Block('logHelloName'),
-						new Extension.Palette.Block('logHelloWorld'),
+						new Extension.Palette.Block('repeatString'),
+						new Extension.Palette.Block('isEven'),
 					],
 					StageMorph
 				),
 				new Extension.PaletteCategory(
-					'operators',
+					'Hello World',
 					[
-						new Extension.Palette.Block('isEven'),
-						new Extension.Palette.Block('repeatString'),
+						new Extension.Palette.Block('logHelloName'),
+						new Extension.Palette.Block('logHelloWorld'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
-					'operators',
+					'Hello World',
 					[
-						new Extension.Palette.Block('isEven'),
-						new Extension.Palette.Block('repeatString'),
+						new Extension.Palette.Block('logHelloName'),
+						new Extension.Palette.Block('logHelloWorld'),
 					],
 					StageMorph
 				),
@@ -82,14 +82,6 @@
 					function (name) { return ExampleExtension_fns.hello_name(name); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
-					'isEven',
-					'predicate',
-					'operators',
-					'is %num even?',
-					[],
-					function (num) { return ExampleExtension_fns.is_even(num); }
-				).for(SpriteMorph, StageMorph),
-				new Extension.Block(
 					'repeatString',
 					'reporter',
 					'operators',
@@ -104,6 +96,14 @@
 					'Log Hello World!',
 					[],
 					function () { return ExampleExtension_fns.hello_world(); }
+				).for(SpriteMorph, StageMorph),
+				new Extension.Block(
+					'isEven',
+					'predicate',
+					'operators',
+					'is %num even?',
+					[],
+					function (num) { return ExampleExtension_fns.is_even(num); }
 				).for(SpriteMorph, StageMorph),
 
             ];
@@ -170,17 +170,17 @@
     path = path.substring(0, path.lastIndexOf("/"));
     var s = document.createElement('script');
     s.type = "module";
-    s.innerHTML = `import init, {hello_world, is_even, print_extension_name, repeat_text, hello_name} from '${path}/pkg/netsblox_extension_rs.js';
+    s.innerHTML = `import init, {hello_name, hello_world, is_even, repeat_text, print_extension_name} from '${path}/pkg/netsblox_extension_rs.js';
     
     
         await init();
 
         window.ExampleExtension_fns = {};
+		window.ExampleExtension_fns.hello_name = hello_name;
 		window.ExampleExtension_fns.hello_world = hello_world;
 		window.ExampleExtension_fns.is_even = is_even;
-		window.ExampleExtension_fns.print_extension_name = print_extension_name;
 		window.ExampleExtension_fns.repeat_text = repeat_text;
-		window.ExampleExtension_fns.hello_name = hello_name;
+		window.ExampleExtension_fns.print_extension_name = print_extension_name;
         `;
     document.body.appendChild(s);
 })();

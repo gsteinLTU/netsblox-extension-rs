@@ -55,7 +55,7 @@ $LABELPARTS
     path = path.substring(0, path.lastIndexOf("/"));
     var s = document.createElement('script');
     s.type = "module";
-    s.innerHTML = `import init, {$IMPORTS_LIST} from '${path}/pkg/netsblox_extension_rs.js';
+    s.innerHTML = `import init, {$IMPORTS_LIST} from '${path}/pkg/$PACKAGE_NAME.js';
     
     
         await init();

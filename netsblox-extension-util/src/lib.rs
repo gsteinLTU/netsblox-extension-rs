@@ -1,6 +1,6 @@
 use proc_macro2::{TokenTree};
 use serde::Serialize;
-use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::{HashMap, HashSet}};
+use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::{HashMap, HashSet}, path::Path};
 use regex::Regex;
 use simple_error::bail;
 use syn::{Item, PathSegment, ItemConst, Expr, Member, Lit, ItemFn, Attribute, Meta};
@@ -524,6 +524,11 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         content = content.replace("$IMPORTS_LIST", &fn_names.iter().map(|s| s.to_owned()).collect::<Vec<String>>().join(", "));
         content = content.replace("$WINDOW_IMPORTS", &fn_names.iter().map(|fn_name| format!("\t\twindow.{}_fns.{} = {};", extension_name_no_spaces.as_str(), fn_name, fn_name)).collect::<Vec<String>>().join("\n"));
         
+        let mut package = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let p = Path::new(package.as_str());
+        package = p.file_name().unwrap().to_str().unwrap().to_string();
+        package = package.replace("-", "_");
+        content = content.replace("$PACKAGE_NAME", package.as_str());
 
         let mut out_file = File::create("./index.js")?;
         out_file.write_all(content.as_bytes())?;
