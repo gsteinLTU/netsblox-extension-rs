@@ -33,7 +33,9 @@ pub enum BlockType {
     #[serde(rename = "reporter")]
     Reporter, 
     #[serde(rename = "predicate")]
-    Predicate
+    Predicate,
+    #[serde(rename = "hat")]
+    Hat
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize)]
@@ -141,7 +143,8 @@ fn recreate_netsblox_extension_custom_category(item: &ItemConst) -> CustomCatego
 // Turn syn item into instance
 fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomBlock {
     let mut instance = CustomBlock::default();
-
+    let mut block_type_override = false;
+    
     // Parse information stored in attribute
     if let Meta::List(l) = &attr.meta {
         let t = &l.tokens.clone().into_iter().collect::<Vec<_>>();
@@ -177,6 +180,22 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
                         // For now, defaults to targetting both until we have a use-case justifying it, the library doesn't support enough NetsBlox interaction to make sprites vs stage meaningful yet
                         //warn!("{:?}", arg)
                     },
+                    "type_override" => {
+                        // Allows for overriding block types if desired, or to make hat blocks possible
+                        if let TokenTree::Ident(id) = &arg.last().unwrap() {
+                            block_type_override = true;
+                            match id.to_string().as_str() {
+                                "Command" => { instance.block_type = BlockType::Command },
+                                "Reporter" => { instance.block_type = BlockType::Reporter },
+                                "Predicate" => { instance.block_type = BlockType::Predicate },
+                                "Hat" => { instance.block_type = BlockType::Hat },
+                                _ => { 
+                                    warn!("Unrecognized block type override type: {:?}", id);
+                                    block_type_override = false;
+                                }
+                            }
+                        }
+                    },
                     _ => {}
                 }
             }
@@ -185,20 +204,23 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
 
     // Get information from function signature
     instance.impl_fn = Box::leak(item.sig.ident.to_string().into_boxed_str());
-    match &item.sig.output {
-        syn::ReturnType::Default => instance.block_type = BlockType::Command,
-        syn::ReturnType::Type(_, b) => {
-            match b.as_ref() {
-                syn::Type::Path(p) => {
-                    if &p.path.segments.first().unwrap().ident.to_string() == "bool" {
-                        instance.block_type = BlockType::Predicate
-                    } else {
-                        instance.block_type = BlockType::Reporter
-                    }
-                },
-                _ => instance.block_type = BlockType::Reporter
-            }
-        },
+
+    if !block_type_override {
+        match &item.sig.output {
+            syn::ReturnType::Default => instance.block_type = BlockType::Command,
+            syn::ReturnType::Type(_, b) => {
+                match b.as_ref() {
+                    syn::Type::Path(p) => {
+                        if &p.path.segments.first().unwrap().ident.to_string() == "bool" {
+                            instance.block_type = BlockType::Predicate
+                        } else {
+                            instance.block_type = BlockType::Reporter
+                        }
+                    },
+                    _ => instance.block_type = BlockType::Reporter
+                }
+            },
+        }
     }
 
     instance

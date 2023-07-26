@@ -70,6 +70,11 @@ pub fn is_even(num: f64) -> bool {
     num as usize % 2 == 0
 }
 
+
+#[wasm_bindgen]
+#[netsblox_extension_block(name = "receiveTestEvent", category = "control", spec = "on test event", type_override = netsblox_extension_util::BlockType::Hat, target = netsblox_extension_util::TargetObject::Both)]
+pub fn receive_test_event() { }
+
 #[wasm_bindgen]
 #[netsblox_extension_menu_item("Print Extension Name")]
 pub fn print_extension_name() {
