@@ -433,7 +433,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         let mut settings_string = "".to_string();
 
         for setting in settings {
-            settings_string += format!("\t\t\t\tExtension.ExtensionSetting.createFromLocalStorage('{}', '{}', {}, '{}', '{}', {})\n", setting.name, setting.id, setting.default_value, setting.on_hint, setting.off_hint, setting.hidden).as_str();
+            settings_string += format!("\t\t\t\tExtension.ExtensionSetting.createFromLocalStorage('{}', '{}', {}, '{}', '{}', {}),\n", setting.name, setting.id, setting.default_value, setting.on_hint, setting.off_hint, setting.hidden).as_str();
         }
 
         content = content.replace("$SETTINGS", &settings_string);
