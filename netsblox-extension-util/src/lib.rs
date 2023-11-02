@@ -331,7 +331,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
     let mut extension_info: Option<ExtensionInfo> = None;
     let mut custom_blocks: Vec<(String, CustomBlock)> = vec![];
-    let mut label_parts: HashMap<String, LabelPart> = HashMap::new();
+    let mut label_parts: Vec<(String, LabelPart)> = vec![];
     let mut custom_categories: Vec<(String, CustomCategory)> = vec![];
     let mut menu_items: Vec<(String, String)> = vec![];
     let mut settings: Vec<ExtensionSetting> = vec![];
@@ -354,7 +354,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                     "netsblox_extension_label_part" => {
                         let label_part = recreate_netsblox_extension_label_part(&c);
                         warn!("Found label part block {:?}", label_part);
-                        label_parts.insert(label_part.spec.to_string(), label_part);
+                        label_parts.push((label_part.spec.to_string(), label_part));
                     },
                     "netsblox_extension_category" => {
                         let category = recreate_netsblox_extension_custom_category(&c);
@@ -515,11 +515,11 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             for label_part in Regex::new("%\\w+").unwrap().find_iter(block.spec) {
                 let label_part = label_part.as_str();
 
-                if !label_parts.contains_key(label_part) {
-                    label_parts.insert(label_part.to_string(), LabelPart { 
+                if label_parts.iter().find(|(id, _)| id == label_part).is_none() {
+                    label_parts.push((label_part.to_string(), LabelPart { 
                         spec: label_part.clone(), 
                         slot_type: InputSlotMorphOptions::default() 
-                    });
+                    }));
                 }
             }
         }
@@ -528,7 +528,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         
         let mut label_parts_string = "".to_string();
 
-        for label_part in label_parts.values() {
+        for (_, label_part) in label_parts {
             label_parts_string += "\t\t\t\tnew Extension.LabelPart(\n";
             label_parts_string += format!("\t\t\t\t\t'{}',\n", label_part.spec).as_str();
             label_parts_string += "\t\t\t\t\t() => {\n";
@@ -545,6 +545,8 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
         content = content.replace("$LABELPARTS", &label_parts_string);
 
+        let mut fn_names = fn_names.iter().cloned().collect::<Vec<String>>();
+        fn_names.sort_unstable();
         content = content.replace("$IMPORTS_LIST", &fn_names.iter().map(|s| s.to_owned()).collect::<Vec<String>>().join(", "));
         content = content.replace("$WINDOW_IMPORTS", &fn_names.iter().map(|fn_name| format!("\t\twindow.{}_fns.{} = {};", extension_name_no_spaces.as_str(), fn_name, fn_name)).collect::<Vec<String>>().join("\n"));
         

@@ -53,32 +53,32 @@
 					StageMorph
 				),
 				new Extension.PaletteCategory(
-					'control',
+					'operators',
 					[
-						new Extension.Palette.Block('receiveTestEvent'),
+						new Extension.Palette.Block('repeatString'),
+						new Extension.Palette.Block('isEven'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
-					'control',
+					'operators',
 					[
-						new Extension.Palette.Block('receiveTestEvent'),
+						new Extension.Palette.Block('repeatString'),
+						new Extension.Palette.Block('isEven'),
 					],
 					StageMorph
 				),
 				new Extension.PaletteCategory(
-					'operators',
+					'control',
 					[
-						new Extension.Palette.Block('repeatString'),
-						new Extension.Palette.Block('isEven'),
+						new Extension.Palette.Block('receiveTestEvent'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
-					'operators',
+					'control',
 					[
-						new Extension.Palette.Block('repeatString'),
-						new Extension.Palette.Block('isEven'),
+						new Extension.Palette.Block('receiveTestEvent'),
 					],
 					StageMorph
 				),
@@ -135,7 +135,7 @@
         getLabelParts() {
             return [
 				new Extension.LabelPart(
-					'%num',
+					'%times',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
@@ -147,7 +147,7 @@
 					}
 				),
 				new Extension.LabelPart(
-					'%times',
+					'%num',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
@@ -193,19 +193,19 @@
     path = path.substring(0, path.lastIndexOf("/"));
     var s = document.createElement('script');
     s.type = "module";
-    s.innerHTML = `import init, {is_even, receive_test_event, repeat_text, print_hello_world, print_extension_name, hello_name, hello_world} from '${path}/pkg/netsblox_extension_rs.js';
+    s.innerHTML = `import init, {hello_name, hello_world, is_even, print_extension_name, print_hello_world, receive_test_event, repeat_text} from '${path}/pkg/netsblox_extension_rs.js';
     
     
         await init();
 
         window.ExampleExtension_fns = {};
-		window.ExampleExtension_fns.is_even = is_even;
-		window.ExampleExtension_fns.receive_test_event = receive_test_event;
-		window.ExampleExtension_fns.repeat_text = repeat_text;
-		window.ExampleExtension_fns.print_hello_world = print_hello_world;
-		window.ExampleExtension_fns.print_extension_name = print_extension_name;
 		window.ExampleExtension_fns.hello_name = hello_name;
 		window.ExampleExtension_fns.hello_world = hello_world;
+		window.ExampleExtension_fns.is_even = is_even;
+		window.ExampleExtension_fns.print_extension_name = print_extension_name;
+		window.ExampleExtension_fns.print_hello_world = print_hello_world;
+		window.ExampleExtension_fns.receive_test_event = receive_test_event;
+		window.ExampleExtension_fns.repeat_text = repeat_text;
         `;
     document.body.appendChild(s);
 })();
