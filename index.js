@@ -14,13 +14,14 @@
 
         getSettings() {
             return [
-				Extension.ExtensionSetting.createFromLocalStorage('All Caps output from Menu Item', 'exampleextensionallcaps', false, 'Capitalize Print Extension name output', 'Do not capitalize Print Extension name output', false)
+				Extension.ExtensionSetting.createFromLocalStorage('All Caps output from Menu Item', 'exampleextensionallcaps', false, 'Capitalize output', 'Do not capitalize output', false),
 
             ];
         }
 
         getMenu() {
             return {
+				'Print Hello World': window.ExampleExtension_fns.print_hello_world,
 				'Print Extension Name': window.ExampleExtension_fns.print_extension_name,
 
             };
@@ -36,6 +37,22 @@
         getPalette() {
             return [
 				new Extension.PaletteCategory(
+					'Hello World',
+					[
+						new Extension.Palette.Block('logHelloWorld'),
+						new Extension.Palette.Block('logHelloName'),
+					],
+					SpriteMorph
+				),
+				new Extension.PaletteCategory(
+					'Hello World',
+					[
+						new Extension.Palette.Block('logHelloWorld'),
+						new Extension.Palette.Block('logHelloName'),
+					],
+					StageMorph
+				),
+				new Extension.PaletteCategory(
 					'control',
 					[
 						new Extension.Palette.Block('receiveTestEvent'),
@@ -52,32 +69,16 @@
 				new Extension.PaletteCategory(
 					'operators',
 					[
-						new Extension.Palette.Block('isEven'),
 						new Extension.Palette.Block('repeatString'),
+						new Extension.Palette.Block('isEven'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
 					'operators',
 					[
-						new Extension.Palette.Block('isEven'),
 						new Extension.Palette.Block('repeatString'),
-					],
-					StageMorph
-				),
-				new Extension.PaletteCategory(
-					'Hello World',
-					[
-						new Extension.Palette.Block('logHelloWorld'),
-						new Extension.Palette.Block('logHelloName'),
-					],
-					SpriteMorph
-				),
-				new Extension.PaletteCategory(
-					'Hello World',
-					[
-						new Extension.Palette.Block('logHelloWorld'),
-						new Extension.Palette.Block('logHelloName'),
+						new Extension.Palette.Block('isEven'),
 					],
 					StageMorph
 				),
@@ -96,14 +97,6 @@
 					function () { return ExampleExtension_fns.hello_world(); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
-					'isEven',
-					'predicate',
-					'operators',
-					'is %num even?',
-					[],
-					function (num) { return ExampleExtension_fns.is_even(num); }
-				).for(SpriteMorph, StageMorph),
-				new Extension.Block(
 					'logHelloName',
 					'command',
 					'Hello World',
@@ -120,6 +113,14 @@
 					function (text, times) { return ExampleExtension_fns.repeat_text(text, times); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
+					'isEven',
+					'predicate',
+					'operators',
+					'is %num even?',
+					[],
+					function (num) { return ExampleExtension_fns.is_even(num); }
+				).for(SpriteMorph, StageMorph),
+				new Extension.Block(
 					'receiveTestEvent',
 					'hat',
 					'control',
@@ -133,18 +134,6 @@
 
         getLabelParts() {
             return [
-				new Extension.LabelPart(
-					'%name',
-					() => {
-						const part = new InputSlotMorph(
-							null, // text
-							false, // is numeric
-							null,
-							false
-						);
-						return part;
-					}
-				),
 				new Extension.LabelPart(
 					'%num',
 					() => {
@@ -163,6 +152,18 @@
 						const part = new InputSlotMorph(
 							null, // text
 							true, // is numeric
+							null,
+							false
+						);
+						return part;
+					}
+				),
+				new Extension.LabelPart(
+					'%name',
+					() => {
+						const part = new InputSlotMorph(
+							null, // text
+							false, // is numeric
 							null,
 							false
 						);
@@ -192,18 +193,19 @@
     path = path.substring(0, path.lastIndexOf("/"));
     var s = document.createElement('script');
     s.type = "module";
-    s.innerHTML = `import init, {repeat_text, receive_test_event, print_extension_name, hello_world, hello_name, is_even} from '${path}/pkg/netsblox_extension_rs.js';
+    s.innerHTML = `import init, {is_even, receive_test_event, repeat_text, print_hello_world, print_extension_name, hello_name, hello_world} from '${path}/pkg/netsblox_extension_rs.js';
     
     
         await init();
 
         window.ExampleExtension_fns = {};
-		window.ExampleExtension_fns.repeat_text = repeat_text;
-		window.ExampleExtension_fns.receive_test_event = receive_test_event;
-		window.ExampleExtension_fns.print_extension_name = print_extension_name;
-		window.ExampleExtension_fns.hello_world = hello_world;
-		window.ExampleExtension_fns.hello_name = hello_name;
 		window.ExampleExtension_fns.is_even = is_even;
+		window.ExampleExtension_fns.receive_test_event = receive_test_event;
+		window.ExampleExtension_fns.repeat_text = repeat_text;
+		window.ExampleExtension_fns.print_hello_world = print_hello_world;
+		window.ExampleExtension_fns.print_extension_name = print_extension_name;
+		window.ExampleExtension_fns.hello_name = hello_name;
+		window.ExampleExtension_fns.hello_world = hello_world;
         `;
     document.body.appendChild(s);
 })();

@@ -330,10 +330,10 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
     let ast = syn::parse_file(&content)?;
 
     let mut extension_info: Option<ExtensionInfo> = None;
-    let mut custom_blocks: HashMap<String, CustomBlock> = HashMap::new();
+    let mut custom_blocks: Vec<(String, CustomBlock)> = vec![];
     let mut label_parts: HashMap<String, LabelPart> = HashMap::new();
-    let mut custom_categories: HashMap<String, CustomCategory> = HashMap::new();
-    let mut menu_items: HashMap<String, String> = HashMap::new();
+    let mut custom_categories: Vec<(String, CustomCategory)> = vec![];
+    let mut menu_items: Vec<(String, String)> = vec![];
     let mut settings: Vec<ExtensionSetting> = vec![];
     let mut fn_names: HashSet<String> = HashSet::new();
 
@@ -359,7 +359,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                     "netsblox_extension_category" => {
                         let category = recreate_netsblox_extension_custom_category(&c);
                         warn!("Found custom category {:?}", category);
-                        custom_categories.insert(category.name.to_string(), category);
+                        custom_categories.push((category.name.to_string(), category));
                     },
                     "netsblox_extension_setting" => {
                         let setting: ExtensionSetting = recreate_netsblox_extension_setting(&c);
@@ -381,7 +381,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
                         if !block.name.is_empty() {
                             warn!("Found custom block {:?}", block);
-                            custom_blocks.insert(block.name.to_string(), block.clone());
+                            custom_blocks.push((block.name.to_string(), block.clone()));
                             fn_names.insert(block.impl_fn.to_string());
                         } else {
                             warn!("Invalid custom block found");
@@ -404,7 +404,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                             if let Some(arg) = args.first() {
                                 let menu_text = arg.first().unwrap().to_string().replace('"', "");
                                 warn!("Found menu item {} for fn {}", menu_text, fn_name);
-                                menu_items.insert(menu_text, fn_name.to_string());
+                                menu_items.push((menu_text, fn_name.to_string()));
                                 fn_names.insert(fn_name.to_string());
                             }
                         }
@@ -440,7 +440,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         
         let mut categories_string = "".to_string();
 
-        for cat in custom_categories.values() {
+        for (_, cat) in custom_categories {
             categories_string += format!("\t\t\t\tnew Extension.Category('{}', new Color({}, {}, {})),\n", cat.name, cat.color.0, cat.color.1, cat.color.2).as_str();
         }
 
@@ -450,7 +450,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
         let mut categories_map: HashMap<String, Vec<String>> = HashMap::new();
 
-        for block in custom_blocks.values() {
+        for (_, block) in &custom_blocks {
             let block_cat = serde_json::to_string(&block.category)?.strip_prefix('\"').unwrap().strip_suffix('\"').unwrap().to_string();
 
             if !categories_map.contains_key(&block_cat) {
@@ -466,7 +466,8 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             palette_string += format!("\t\t\t\t\t'{}',\n", category).as_str();
             palette_string += "\t\t\t\t\t[\n";
             for block_name in categories_map.get(category).unwrap() {
-                if custom_blocks.get(block_name).unwrap().target == TargetObject::SpriteMorph || custom_blocks.get(block_name).unwrap().target == TargetObject::Both {
+                let get = &custom_blocks.iter().find(|(b, _)| b == block_name).unwrap().1;
+                if get.target == TargetObject::SpriteMorph || get.target == TargetObject::Both {
                     palette_string += format!("\t\t\t\t\t\tnew Extension.Palette.Block('{}'),\n", block_name).as_str();
                 }
             }
@@ -478,7 +479,8 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             palette_string += format!("\t\t\t\t\t'{}',\n", category).as_str();
             palette_string += "\t\t\t\t\t[\n";
             for block_name in categories_map.get(category).unwrap() {
-                if custom_blocks.get(block_name).unwrap().target == TargetObject::StageMorph || custom_blocks.get(block_name).unwrap().target == TargetObject::Both {
+                let get = &custom_blocks.iter().find(|(b, _)| b == block_name).unwrap().1;
+                if get.target == TargetObject::StageMorph || get.target == TargetObject::Both {
                     palette_string += format!("\t\t\t\t\t\tnew Extension.Palette.Block('{}'),\n", block_name).as_str();
                 }
             }
@@ -494,7 +496,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
         let label_parts_regex = Regex::new("%(\\w+)")?;
 
-        for block in custom_blocks.values() {
+        for (_, block) in &custom_blocks {
             blocks_str += "\t\t\t\tnew Extension.Block(\n";
             blocks_str += format!("\t\t\t\t\t'{}',\n", block.name).as_str();
             blocks_str += format!("\t\t\t\t\t'{}',\n", serde_json::to_string(&block.block_type)?.strip_prefix("\"").unwrap().strip_suffix("\"").unwrap()).as_str();

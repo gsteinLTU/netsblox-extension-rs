@@ -23,8 +23,8 @@ const CAPS_SETTING: ExtensionSetting = ExtensionSetting {
     name: "All Caps output from Menu Item",
     id: "exampleextensionallcaps",
     default_value: false,
-    on_hint: "Capitalize Print Extension name output",
-    off_hint: "Do not capitalize Print Extension name output",
+    on_hint: "Capitalize output",
+    off_hint: "Do not capitalize output",
     hidden: false,
 };
 
@@ -74,6 +74,16 @@ pub fn is_even(num: f64) -> bool {
 #[wasm_bindgen]
 #[netsblox_extension_block(name = "receiveTestEvent", category = "control", spec = "on test event", type_override = netsblox_extension_util::BlockType::Hat, target = netsblox_extension_util::TargetObject::Both)]
 pub fn receive_test_event() { }
+
+#[wasm_bindgen]
+#[netsblox_extension_menu_item("Print Hello World")]
+pub fn print_hello_world() {
+    if CAPS_SETTING.get() {
+        console::log_1(&"Hello World".to_owned().to_uppercase().into());
+    } else {
+        console::log_1(&"Hello World".to_owned().into());
+    }
+}
 
 #[wasm_bindgen]
 #[netsblox_extension_menu_item("Print Extension Name")]
