@@ -461,7 +461,10 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         }
         
 
-        for category in categories_map.keys() {
+        let mut cat_names: Vec<_> = categories_map.keys().collect();
+        cat_names.sort_unstable();
+        
+        for category in cat_names {
             palette_string += "\t\t\t\tnew Extension.PaletteCategory(\n";
             palette_string += format!("\t\t\t\t\t'{}',\n", category).as_str();
             palette_string += "\t\t\t\t\t[\n";

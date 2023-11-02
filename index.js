@@ -53,32 +53,32 @@
 					StageMorph
 				),
 				new Extension.PaletteCategory(
-					'operators',
+					'control',
 					[
-						new Extension.Palette.Block('repeatString'),
-						new Extension.Palette.Block('isEven'),
+						new Extension.Palette.Block('receiveTestEvent'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
-					'operators',
+					'control',
 					[
-						new Extension.Palette.Block('repeatString'),
-						new Extension.Palette.Block('isEven'),
+						new Extension.Palette.Block('receiveTestEvent'),
 					],
 					StageMorph
 				),
 				new Extension.PaletteCategory(
-					'control',
+					'operators',
 					[
-						new Extension.Palette.Block('receiveTestEvent'),
+						new Extension.Palette.Block('repeatString'),
+						new Extension.Palette.Block('isEven'),
 					],
 					SpriteMorph
 				),
 				new Extension.PaletteCategory(
-					'control',
+					'operators',
 					[
-						new Extension.Palette.Block('receiveTestEvent'),
+						new Extension.Palette.Block('repeatString'),
+						new Extension.Palette.Block('isEven'),
 					],
 					StageMorph
 				),
