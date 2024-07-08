@@ -2,7 +2,7 @@
 
 use netsblox_extension_macro::*;
 use netsblox_extension_util::*;
-use wasm_bindgen::prelude::wasm_bindgen;
+use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 use web_sys::console;
 extern crate console_error_panic_hook;
 use std::panic;
@@ -93,4 +93,10 @@ pub fn print_extension_name() {
     } else {
         console::log_1(&INFO.name.to_owned().into());
     }
+}
+
+#[wasm_bindgen]
+#[netsblox_extension_block(name = "printProcess", category = "control", spec = "print process", target = netsblox_extension_util::TargetObject::Both, pass_proc = true)]
+pub fn print_process(this: JsValue) {
+    console::log_1(&this);
 }
