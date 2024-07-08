@@ -1,4 +1,4 @@
-use proc_macro2::{TokenTree};
+use proc_macro2::TokenTree;
 use serde::Serialize;
 use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::{HashMap, HashSet}, path::Path};
 use regex::Regex;
@@ -13,12 +13,13 @@ pub struct ExtensionInfo {
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct CustomBlock {
     pub name: &'static str,
-    pub block_type: BlockType, 
-    pub category: &'static str, 
-    pub spec: &'static str, 
-    pub defaults: Vec<&'static str>, 
+    pub block_type: BlockType,
+    pub category: &'static str,
+    pub spec: &'static str,
+    pub defaults: Vec<&'static str>,
     pub impl_fn: &'static str,
     pub target: TargetObject,
+    pub pass_proc: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, PartialEq, Eq)]
@@ -29,9 +30,9 @@ pub enum TargetObject {
 #[derive(Debug, Clone, Copy, Serialize, Default)]
 pub enum BlockType {
     #[default] #[serde(rename = "command")]
-    Command, 
+    Command,
     #[serde(rename = "reporter")]
-    Reporter, 
+    Reporter,
     #[serde(rename = "predicate")]
     Predicate,
     #[serde(rename = "hat")]
@@ -46,13 +47,13 @@ pub struct InputSlotMorphOptions {
 
 #[derive(Debug,Clone, Copy, Default, Serialize)]
 pub struct LabelPart {
-    pub spec: &'static str, 
+    pub spec: &'static str,
     pub slot_type: InputSlotMorphOptions
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize)]
 pub struct CustomCategory {
-    pub name: &'static str, 
+    pub name: &'static str,
     pub color: (f64, f64, f64)
 }
 
@@ -93,12 +94,12 @@ fn recreate_netsblox_extension_info(item: &ItemConst) -> ExtensionInfo {
 
     if let Expr::Struct(s) = &*item.expr {
         for field in &s.fields {
-            if let Member::Named(named) = &field.member { 
+            if let Member::Named(named) = &field.member {
                 let name = named.to_string();
                 {
                     match name.as_str() {
                         "name" => instance.name = extract_string(&field.expr),
-                        _ => warn!("Unknown field: {}", name) 
+                        _ => warn!("Unknown field: {}", name)
                     }
                 }
             }
@@ -113,7 +114,7 @@ fn recreate_netsblox_extension_custom_category(item: &ItemConst) -> CustomCatego
 
     if let Expr::Struct(s) = &*item.expr {
         for field in &s.fields {
-            if let Member::Named(named) = &field.member { 
+            if let Member::Named(named) = &field.member {
                 let name = named.to_string();
                 {
                     match name.as_str() {
@@ -131,7 +132,7 @@ fn recreate_netsblox_extension_custom_category(item: &ItemConst) -> CustomCatego
                                 }
                             }
                         },
-                        _ => warn!("Unknown field: {}", name) 
+                        _ => warn!("Unknown field: {}", name)
                     }
                 }
             }
@@ -144,17 +145,17 @@ fn recreate_netsblox_extension_custom_category(item: &ItemConst) -> CustomCatego
 fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomBlock {
     let mut instance = CustomBlock::default();
     let mut block_type_override = false;
-    
+
     // Parse information stored in attribute
     if let Meta::List(l) = &attr.meta {
         let t = &l.tokens.clone().into_iter().collect::<Vec<_>>();
 
         let args = t.split(|tt| {
             if let TokenTree::Punct(p) = tt {
-                return p.as_char() == ','; 
+                return p.as_char() == ',';
             }
 
-            false 
+            false
         }).collect::<Vec<_>>();
 
         for arg in args {
@@ -189,17 +190,22 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
                                 "Reporter" => { instance.block_type = BlockType::Reporter },
                                 "Predicate" => { instance.block_type = BlockType::Predicate },
                                 "Hat" => { instance.block_type = BlockType::Hat },
-                                _ => { 
+                                _ => {
                                     warn!("Unrecognized block type override type: {:?}", id);
                                     block_type_override = false;
                                 }
                             }
                         }
                     },
-                    _ => {}
+                    "pass_proc" => {
+                        if arg[2].to_string() == "true" {
+                            instance.pass_proc = true;
+                        }
+                    }
+                    x => warn!("Unknown field: {x}"),
                 }
             }
-        }   
+        }
     }
 
     // Get information from function signature
@@ -233,8 +239,8 @@ fn recreate_netsblox_extension_label_part(item: &ItemConst) -> LabelPart {
 
     if let Expr::Struct(s) = &*item.expr {
         for field in &s.fields {
-            if let Member::Named(named) = &field.member { 
-                
+            if let Member::Named(named) = &field.member {
+
                 let name = named.to_string();
                 {
                     match name.as_str() {
@@ -245,7 +251,7 @@ fn recreate_netsblox_extension_label_part(item: &ItemConst) -> LabelPart {
 
                                 for field in &slot_type.fields {
 
-                                    if let Member::Named(named) = &field.member { 
+                                    if let Member::Named(named) = &field.member {
                                         match named.to_string().as_str() {
                                             "text" => slot_type_instance.text = Some(extract_string(&field.expr)),
                                             "is_numeric" => slot_type_instance.is_numeric = extract_bool(&field.expr),
@@ -271,7 +277,7 @@ fn recreate_netsblox_extension_setting(item: &ItemConst) -> ExtensionSetting {
 
     if let Expr::Struct(s) = &*item.expr {
         for field in &s.fields {
-            if let Member::Named(named) = &field.member { 
+            if let Member::Named(named) = &field.member {
                 let name = named.to_string();
                 {
                     match name.as_str() {
@@ -281,7 +287,7 @@ fn recreate_netsblox_extension_setting(item: &ItemConst) -> ExtensionSetting {
                         "off_hint" => instance.off_hint = extract_string(&field.expr),
                         "default_value" => instance.default_value = extract_bool(&field.expr),
                         "hidden" => instance.hidden = extract_bool(&field.expr),
-                        _ => warn!("Unknown field: {}", name) 
+                        _ => warn!("Unknown field: {}", name)
                     }
                 }
             }
@@ -298,7 +304,7 @@ fn extract_string(expr: &syn::Expr) -> &'static str {
             return Box::leak(val.into_boxed_str());
         }
     }
-    
+
     ""
 }
 
@@ -308,7 +314,7 @@ fn extract_bool(expr: &syn::Expr) -> bool {
             return val.value;
         }
     }
-    
+
     false
 }
 
@@ -318,12 +324,12 @@ fn extract_f64(expr: &syn::Expr) -> f64 {
             return val.base10_parse().unwrap();
         }
     }
-    
+
     0.0
 }
 
 pub fn build() -> Result<(), Box<dyn Error>>  {
-    // Read file  
+    // Read file
     let mut file = File::open("./src/lib.rs")?;
     let mut content = String::new();
     file.read_to_string(&mut content)?;
@@ -389,18 +395,18 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                     },
                     "netsblox_extension_menu_item" => {
                         let fn_name = Box::leak(f.sig.ident.to_string().into_boxed_str());
-                        
+
                         if let Meta::List(l) = &attr.meta {
                             let t = &l.tokens.clone().into_iter().collect::<Vec<_>>();
-                            
+
                             let args = t.split(|tt| {
                                 if let TokenTree::Punct(p) = tt {
-                                    return p.as_char() == ','; 
+                                    return p.as_char() == ',';
                                 }
-                    
-                                false 
+
+                                false
                             }).collect::<Vec<_>>();
-                            
+
                             if let Some(arg) = args.first() {
                                 let menu_text = arg.first().unwrap().to_string().replace('"', "");
                                 warn!("Found menu item {} for fn {}", menu_text, fn_name);
@@ -411,7 +417,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                     },
                     _ => {}
                 }
-            }            
+            }
         }
     }
 
@@ -437,7 +443,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         }
 
         content = content.replace("$SETTINGS", &settings_string);
-        
+
         let mut categories_string = "".to_string();
 
         for (_, cat) in custom_categories {
@@ -459,11 +465,11 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
             categories_map.get_mut(&block_cat).unwrap().push(block.name.to_string());
         }
-        
+
 
         let mut cat_names: Vec<_> = categories_map.keys().collect();
         cat_names.sort_unstable();
-        
+
         for category in cat_names {
             palette_string += "\t\t\t\tnew Extension.PaletteCategory(\n";
             palette_string += format!("\t\t\t\t\t'{}',\n", category).as_str();
@@ -477,7 +483,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             palette_string += "\t\t\t\t\t],\n";
             palette_string += "\t\t\t\t\tSpriteMorph\n";
             palette_string += "\t\t\t\t),\n";
-            
+
             palette_string += "\t\t\t\tnew Extension.PaletteCategory(\n";
             palette_string += format!("\t\t\t\t\t'{}',\n", category).as_str();
             palette_string += "\t\t\t\t\t[\n";
@@ -511,7 +517,9 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                 c.iter().last().unwrap().unwrap().as_str()
             }).collect::<Vec<&str>>().join(", ");
 
-            blocks_str += format!("\t\t\t\t\tfunction ({}) {{ return {}_fns.{}({}); }}\n", label_parts_str, extension_name_no_spaces.as_str(), block.impl_fn, label_parts_str).as_str();
+            let proc_token = block.pass_proc.then(|| "this, ").unwrap_or_default();
+
+            blocks_str += format!("\t\t\t\t\tfunction ({label_parts_str}) {{ return {extension_name_no_spaces}_fns.{}({proc_token}{label_parts_str}); }}\n", block.impl_fn).as_str();
             blocks_str += "\t\t\t\t).for(SpriteMorph, StageMorph),\n";
 
             // Add default label parts
@@ -519,16 +527,16 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                 let label_part = label_part.as_str();
 
                 if label_parts.iter().find(|(id, _)| id == label_part).is_none() {
-                    label_parts.push((label_part.to_string(), LabelPart { 
-                        spec: label_part.clone(), 
-                        slot_type: InputSlotMorphOptions::default() 
+                    label_parts.push((label_part.to_string(), LabelPart {
+                        spec: label_part,
+                        slot_type: InputSlotMorphOptions::default()
                     }));
                 }
             }
         }
 
         content = content.replace("$BLOCKS", blocks_str.as_str());
-        
+
         let mut label_parts_string = "".to_string();
 
         for (_, label_part) in label_parts {
@@ -552,7 +560,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         fn_names.sort_unstable();
         content = content.replace("$IMPORTS_LIST", &fn_names.iter().map(|s| s.to_owned()).collect::<Vec<String>>().join(", "));
         content = content.replace("$WINDOW_IMPORTS", &fn_names.iter().map(|fn_name| format!("\t\twindow.{}_fns.{} = {};", extension_name_no_spaces.as_str(), fn_name, fn_name)).collect::<Vec<String>>().join("\n"));
-        
+
         let mut package = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let p = Path::new(package.as_str());
         package = p.file_name().unwrap().to_str().unwrap().to_string();
