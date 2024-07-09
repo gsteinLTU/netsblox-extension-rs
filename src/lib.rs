@@ -100,3 +100,9 @@ pub fn print_extension_name() {
 pub fn print_process(this: JsValue) {
     console::log_1(&this);
 }
+
+#[wasm_bindgen]
+#[netsblox_extension_block(name = "explode", category = "control", spec = "explode", type_override = netsblox_extension_util::BlockType::Terminator)]
+pub fn explode() {
+    panic!()
+}
