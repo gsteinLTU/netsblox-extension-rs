@@ -106,7 +106,7 @@
 					'logHelloName',
 					'command',
 					'Hello World',
-					'Log Hello %name',
+					'Log Hello %s',
 					[],
 					function (v0) { return ExampleExtension_fns.hello_name(v0); }
 				).for(SpriteMorph, StageMorph),
@@ -114,7 +114,7 @@
 					'repeatString',
 					'reporter',
 					'operators',
-					'Repeat %text for %times times',
+					'Repeat %s for %times times',
 					[],
 					function (v0, v1) { return ExampleExtension_fns.repeat_text(v0, v1); }
 				).for(SpriteMorph, StageMorph),
@@ -182,30 +182,6 @@
 						const part = new InputSlotMorph(
 							null, // text
 							true, // is numeric
-							null,
-							false
-						);
-						return part;
-					}
-				),
-				new Extension.LabelPart(
-					'name',
-					() => {
-						const part = new InputSlotMorph(
-							null, // text
-							false, // is numeric
-							null,
-							false
-						);
-						return part;
-					}
-				),
-				new Extension.LabelPart(
-					'text',
-					() => {
-						const part = new InputSlotMorph(
-							null, // text
-							false, // is numeric
 							null,
 							false
 						);

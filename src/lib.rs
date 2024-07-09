@@ -41,7 +41,7 @@ pub fn hello_world() {
 }
 
 #[wasm_bindgen]
-#[netsblox_extension_block(name = "logHelloName", category = "Hello World", spec = "Log Hello %name", target = netsblox_extension_util::TargetObject::Both)]
+#[netsblox_extension_block(name = "logHelloName", category = "Hello World", spec = "Log Hello %s", target = netsblox_extension_util::TargetObject::Both)]
 pub fn hello_name(name: &str) {
     console::log_1(&format!("Hello {}!", name).to_owned().into());
 }
@@ -53,7 +53,7 @@ const LABEL_PART_TIMES: LabelPart = LabelPart {
 };
 
 #[wasm_bindgen]
-#[netsblox_extension_block(name = "repeatString", category = "operators", spec = "Repeat %text for %times times", target = netsblox_extension_util::TargetObject::Both)]
+#[netsblox_extension_block(name = "repeatString", category = "operators", spec = "Repeat %s for %times times", target = netsblox_extension_util::TargetObject::Both)]
 pub fn repeat_text(text: &str, times: f64) -> String {
     text.repeat(times as usize)
 }

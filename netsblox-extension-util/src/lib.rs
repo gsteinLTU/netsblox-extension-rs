@@ -515,18 +515,6 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
             write!(blocks_str, "\t\t\t\t\tfunction ({label_parts_str}) {{ return {extension_name_no_spaces}_fns.{}({proc_token}{label_parts_str}); }}\n", block.impl_fn).unwrap();
             write!(&mut blocks_str, "\t\t\t\t){terminal_token}.for(SpriteMorph, StageMorph),\n").unwrap();
-
-            // Add default label parts
-            for label_part in label_parts_regex.captures_iter(block.spec) {
-                let label_part = label_part.iter().last().unwrap().unwrap().as_str();
-
-                if label_parts.iter().find(|(id, _)| *id == label_part).is_none() {
-                    label_parts.push((label_part, LabelPart {
-                        spec: label_part,
-                        slot_type: InputSlotMorphOptions::default()
-                    }));
-                }
-            }
         }
 
         content = content.replace("$BLOCKS", blocks_str.as_str());
