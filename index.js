@@ -75,6 +75,7 @@
 					[
 						new Extension.Palette.Block('repeatString'),
 						new Extension.Palette.Block('isEven'),
+						new Extension.Palette.Block('addAll'),
 					],
 					SpriteMorph
 				),
@@ -83,6 +84,7 @@
 					[
 						new Extension.Palette.Block('repeatString'),
 						new Extension.Palette.Block('isEven'),
+						new Extension.Palette.Block('addAll'),
 					],
 					StageMorph
 				),
@@ -148,6 +150,14 @@
 					[],
 					function () { return ExampleExtension_fns.explode(); }
 				).terminal().for(SpriteMorph, StageMorph),
+				new Extension.Block(
+					'addAll',
+					'reporter',
+					'operators',
+					'add numbers %mult%num',
+					[],
+					function (v0) { return ExampleExtension_fns.add_all(v0); }
+				).for(SpriteMorph, StageMorph),
 
             ];
         }
@@ -155,7 +165,7 @@
         getLabelParts() {
             return [
 				new Extension.LabelPart(
-					'%times',
+					'times',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
@@ -167,7 +177,7 @@
 					}
 				),
 				new Extension.LabelPart(
-					'%num',
+					'num',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
@@ -179,7 +189,7 @@
 					}
 				),
 				new Extension.LabelPart(
-					'%name',
+					'name',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
@@ -191,7 +201,7 @@
 					}
 				),
 				new Extension.LabelPart(
-					'%text',
+					'text',
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
@@ -213,12 +223,13 @@
     path = path.substring(0, path.lastIndexOf("/"));
     var s = document.createElement('script');
     s.type = "module";
-    s.innerHTML = `import init, {explode, hello_name, hello_world, is_even, print_extension_name, print_hello_world, print_process, receive_test_event, repeat_text} from '${path}/pkg/netsblox_extension_rs.js';
+    s.innerHTML = `import init, {add_all, explode, hello_name, hello_world, is_even, print_extension_name, print_hello_world, print_process, receive_test_event, repeat_text} from '${path}/pkg/netsblox_extension_rs.js';
     
     
         await init();
 
         window.ExampleExtension_fns = {};
+		window.ExampleExtension_fns.add_all = add_all;
 		window.ExampleExtension_fns.explode = explode;
 		window.ExampleExtension_fns.hello_name = hello_name;
 		window.ExampleExtension_fns.hello_world = hello_world;

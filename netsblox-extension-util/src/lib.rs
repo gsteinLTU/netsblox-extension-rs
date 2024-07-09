@@ -332,7 +332,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
     let mut extension_info: Option<ExtensionInfo> = None;
     let mut custom_blocks: Vec<(String, CustomBlock)> = vec![];
-    let mut label_parts: Vec<(String, LabelPart)> = vec![];
+    let mut label_parts: Vec<(&str, LabelPart)> = vec![];
     let mut custom_categories: Vec<(String, CustomCategory)> = vec![];
     let mut menu_items: Vec<(String, String)> = vec![];
     let mut settings: Vec<ExtensionSetting> = vec![];
@@ -355,7 +355,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                     "netsblox_extension_label_part" => {
                         let label_part = recreate_netsblox_extension_label_part(&c);
                         warn!("Found label part block {:?}", label_part);
-                        label_parts.push((label_part.spec.to_string(), label_part));
+                        label_parts.push((label_part.spec, label_part));
                     },
                     "netsblox_extension_category" => {
                         let category = recreate_netsblox_extension_custom_category(&c);
@@ -498,7 +498,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
         let mut blocks_str = "".to_string();
 
-        let label_parts_regex = Regex::new("%(\\w+)")?;
+        let label_parts_regex = Regex::new(r"(%mult)?%(\w+)")?;
 
         for (_, block) in &custom_blocks {
             blocks_str += "\t\t\t\tnew Extension.Block(\n";
@@ -517,11 +517,11 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             write!(&mut blocks_str, "\t\t\t\t){terminal_token}.for(SpriteMorph, StageMorph),\n").unwrap();
 
             // Add default label parts
-            for label_part in Regex::new("%\\w+").unwrap().find_iter(block.spec) {
-                let label_part = label_part.as_str();
+            for label_part in label_parts_regex.captures_iter(block.spec) {
+                let label_part = label_part.iter().last().unwrap().unwrap().as_str();
 
-                if label_parts.iter().find(|(id, _)| id == label_part).is_none() {
-                    label_parts.push((label_part.to_string(), LabelPart {
+                if label_parts.iter().find(|(id, _)| *id == label_part).is_none() {
+                    label_parts.push((label_part, LabelPart {
                         spec: label_part,
                         slot_type: InputSlotMorphOptions::default()
                     }));
