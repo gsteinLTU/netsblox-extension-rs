@@ -508,9 +508,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             blocks_str += format!("\t\t\t\t\t'{}',\n", block.spec).as_str();
             blocks_str += "\t\t\t\t\t[],\n";
 
-            let label_parts_str = label_parts_regex.captures_iter(block.spec).map(|c| {
-                c.iter().last().unwrap().unwrap().as_str()
-            }).collect::<Vec<&str>>().join(", ");
+            let label_parts_str = label_parts_regex.captures_iter(block.spec).enumerate().map(|(i, _)| format!("v{i}")).collect::<Vec<_>>().join(", ");
 
             let proc_token = if block.pass_proc { "this, " } else { "" };
             let terminal_token = if block.block_type == BlockType::Terminator { ".terminal()" } else { "" };

@@ -106,7 +106,7 @@
 					'Hello World',
 					'Log Hello %name',
 					[],
-					function (name) { return ExampleExtension_fns.hello_name(name); }
+					function (v0) { return ExampleExtension_fns.hello_name(v0); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
 					'repeatString',
@@ -114,7 +114,7 @@
 					'operators',
 					'Repeat %text for %times times',
 					[],
-					function (text, times) { return ExampleExtension_fns.repeat_text(text, times); }
+					function (v0, v1) { return ExampleExtension_fns.repeat_text(v0, v1); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
 					'isEven',
@@ -122,7 +122,7 @@
 					'operators',
 					'is %num even?',
 					[],
-					function (num) { return ExampleExtension_fns.is_even(num); }
+					function (v0) { return ExampleExtension_fns.is_even(v0); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
 					'receiveTestEvent',
