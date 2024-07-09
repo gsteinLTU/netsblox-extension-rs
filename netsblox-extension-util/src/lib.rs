@@ -1,6 +1,6 @@
 use proc_macro2::TokenTree;
 use serde::Serialize;
-use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::{HashMap, HashSet}, path::Path};
+use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::{HashMap, HashSet}, path::Path, fmt::Write as FmtWrite};
 use regex::Regex;
 use simple_error::bail;
 use syn::{Item, PathSegment, ItemConst, Expr, Member, Lit, ItemFn, Attribute, Meta};
@@ -27,10 +27,12 @@ pub enum TargetObject {
     SpriteMorph, StageMorph, #[default] Both
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Default, PartialEq, Eq)]
 pub enum BlockType {
     #[default] #[serde(rename = "command")]
     Command,
+    #[serde(rename = "command")]
+    Terminator,
     #[serde(rename = "reporter")]
     Reporter,
     #[serde(rename = "predicate")]
@@ -182,10 +184,11 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
                         //warn!("{:?}", arg)
                     },
                     "type_override" => {
-                        // Allows for overriding block types if desired, or to make hat blocks possible
+                        // Allows for overriding block types if desired, or to make hat/terminal blocks possible
                         if let TokenTree::Ident(id) = &arg.last().unwrap() {
                             block_type_override = true;
                             match id.to_string().as_str() {
+                                "Terminator" => { instance.block_type = BlockType::Terminator },
                                 "Command" => { instance.block_type = BlockType::Command },
                                 "Reporter" => { instance.block_type = BlockType::Reporter },
                                 "Predicate" => { instance.block_type = BlockType::Predicate },
@@ -212,21 +215,13 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
     instance.impl_fn = Box::leak(item.sig.ident.to_string().into_boxed_str());
 
     if !block_type_override {
-        match &item.sig.output {
-            syn::ReturnType::Default => instance.block_type = BlockType::Command,
-            syn::ReturnType::Type(_, b) => {
-                match b.as_ref() {
-                    syn::Type::Path(p) => {
-                        if &p.path.segments.first().unwrap().ident.to_string() == "bool" {
-                            instance.block_type = BlockType::Predicate
-                        } else {
-                            instance.block_type = BlockType::Reporter
-                        }
-                    },
-                    _ => instance.block_type = BlockType::Reporter
-                }
+        instance.block_type = match &item.sig.output {
+            syn::ReturnType::Default => BlockType::Command,
+            syn::ReturnType::Type(_, b) => match b.as_ref() {
+                syn::Type::Path(p) if &p.path.segments.first().unwrap().ident.to_string() == "bool" => BlockType::Predicate,
+                _ => BlockType::Reporter
             },
-        }
+        };
     }
 
     instance
@@ -431,7 +426,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         let mut menu_string = "".to_string();
 
         for (label, fn_name) in menu_items {
-            menu_string += format!("\t\t\t\t'{}': window.{}_fns.{},\n", label, extension_name_no_spaces.as_str(), fn_name).as_str();
+            write!(menu_string, "\t\t\t\t'{}': window.{}_fns.{},\n", label, extension_name_no_spaces.as_str(), fn_name).unwrap();
         }
 
         content = content.replace("$MENU", &menu_string);
@@ -439,7 +434,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         let mut settings_string = "".to_string();
 
         for setting in settings {
-            settings_string += format!("\t\t\t\tExtension.ExtensionSetting.createFromLocalStorage('{}', '{}', {}, '{}', '{}', {}),\n", setting.name, setting.id, setting.default_value, setting.on_hint, setting.off_hint, setting.hidden).as_str();
+            write!(settings_string, "\t\t\t\tExtension.ExtensionSetting.createFromLocalStorage('{}', '{}', {}, '{}', '{}', {}),\n", setting.name, setting.id, setting.default_value, setting.on_hint, setting.off_hint, setting.hidden).unwrap();
         }
 
         content = content.replace("$SETTINGS", &settings_string);
@@ -447,7 +442,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         let mut categories_string = "".to_string();
 
         for (_, cat) in custom_categories {
-            categories_string += format!("\t\t\t\tnew Extension.Category('{}', new Color({}, {}, {})),\n", cat.name, cat.color.0, cat.color.1, cat.color.2).as_str();
+            write!(categories_string, "\t\t\t\tnew Extension.Category('{}', new Color({}, {}, {})),\n", cat.name, cat.color.0, cat.color.1, cat.color.2).unwrap();
         }
 
         content = content.replace("$CATEGORIES", &categories_string);
@@ -477,7 +472,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             for block_name in categories_map.get(category).unwrap() {
                 let get = &custom_blocks.iter().find(|(b, _)| b == block_name).unwrap().1;
                 if get.target == TargetObject::SpriteMorph || get.target == TargetObject::Both {
-                    palette_string += format!("\t\t\t\t\t\tnew Extension.Palette.Block('{}'),\n", block_name).as_str();
+                    write!(palette_string, "\t\t\t\t\t\tnew Extension.Palette.Block('{}'),\n", block_name).unwrap();
                 }
             }
             palette_string += "\t\t\t\t\t],\n";
@@ -490,7 +485,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             for block_name in categories_map.get(category).unwrap() {
                 let get = &custom_blocks.iter().find(|(b, _)| b == block_name).unwrap().1;
                 if get.target == TargetObject::StageMorph || get.target == TargetObject::Both {
-                    palette_string += format!("\t\t\t\t\t\tnew Extension.Palette.Block('{}'),\n", block_name).as_str();
+                    write!(palette_string, "\t\t\t\t\t\tnew Extension.Palette.Block('{}'),\n", block_name).unwrap();
                 }
             }
             palette_string += "\t\t\t\t\t],\n";
@@ -511,16 +506,15 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             blocks_str += format!("\t\t\t\t\t'{}',\n", serde_json::to_string(&block.block_type)?.strip_prefix("\"").unwrap().strip_suffix("\"").unwrap()).as_str();
             blocks_str += format!("\t\t\t\t\t'{}',\n", serde_json::to_string(&block.category)?.strip_prefix("\"").unwrap().strip_suffix("\"").unwrap()).as_str();
             blocks_str += format!("\t\t\t\t\t'{}',\n", block.spec).as_str();
-            blocks_str += format!("\t\t\t\t\t[],\n").as_str();
+            blocks_str += "\t\t\t\t\t[],\n";
 
-            let label_parts_str = label_parts_regex.captures_iter(block.spec).map(|c| {
-                c.iter().last().unwrap().unwrap().as_str()
-            }).collect::<Vec<&str>>().join(", ");
+            let label_parts_str = label_parts_regex.captures_iter(block.spec).enumerate().map(|(i, _)| format!("v{i}")).collect::<Vec<_>>().join(", ");
 
-            let proc_token = block.pass_proc.then(|| "this, ").unwrap_or_default();
+            let proc_token = if block.pass_proc { "this, " } else { "" };
+            let terminal_token = if block.block_type == BlockType::Terminator { ".terminal()" } else { "" };
 
-            blocks_str += format!("\t\t\t\t\tfunction ({label_parts_str}) {{ return {extension_name_no_spaces}_fns.{}({proc_token}{label_parts_str}); }}\n", block.impl_fn).as_str();
-            blocks_str += "\t\t\t\t).for(SpriteMorph, StageMorph),\n";
+            write!(blocks_str, "\t\t\t\t\tfunction ({label_parts_str}) {{ return {extension_name_no_spaces}_fns.{}({proc_token}{label_parts_str}); }}\n", block.impl_fn).unwrap();
+            write!(&mut blocks_str, "\t\t\t\t){terminal_token}.for(SpriteMorph, StageMorph),\n").unwrap();
 
             // Add default label parts
             for label_part in Regex::new("%\\w+").unwrap().find_iter(block.spec) {

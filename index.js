@@ -57,6 +57,7 @@
 					[
 						new Extension.Palette.Block('receiveTestEvent'),
 						new Extension.Palette.Block('printProcess'),
+						new Extension.Palette.Block('explode'),
 					],
 					SpriteMorph
 				),
@@ -65,6 +66,7 @@
 					[
 						new Extension.Palette.Block('receiveTestEvent'),
 						new Extension.Palette.Block('printProcess'),
+						new Extension.Palette.Block('explode'),
 					],
 					StageMorph
 				),
@@ -104,7 +106,7 @@
 					'Hello World',
 					'Log Hello %name',
 					[],
-					function (name) { return ExampleExtension_fns.hello_name(name); }
+					function (v0) { return ExampleExtension_fns.hello_name(v0); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
 					'repeatString',
@@ -112,7 +114,7 @@
 					'operators',
 					'Repeat %text for %times times',
 					[],
-					function (text, times) { return ExampleExtension_fns.repeat_text(text, times); }
+					function (v0, v1) { return ExampleExtension_fns.repeat_text(v0, v1); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
 					'isEven',
@@ -120,7 +122,7 @@
 					'operators',
 					'is %num even?',
 					[],
-					function (num) { return ExampleExtension_fns.is_even(num); }
+					function (v0) { return ExampleExtension_fns.is_even(v0); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
 					'receiveTestEvent',
@@ -138,6 +140,14 @@
 					[],
 					function () { return ExampleExtension_fns.print_process(this, ); }
 				).for(SpriteMorph, StageMorph),
+				new Extension.Block(
+					'explode',
+					'command',
+					'control',
+					'explode',
+					[],
+					function () { return ExampleExtension_fns.explode(); }
+				).terminal().for(SpriteMorph, StageMorph),
 
             ];
         }
@@ -203,12 +213,13 @@
     path = path.substring(0, path.lastIndexOf("/"));
     var s = document.createElement('script');
     s.type = "module";
-    s.innerHTML = `import init, {hello_name, hello_world, is_even, print_extension_name, print_hello_world, print_process, receive_test_event, repeat_text} from '${path}/pkg/netsblox_extension_rs.js';
+    s.innerHTML = `import init, {explode, hello_name, hello_world, is_even, print_extension_name, print_hello_world, print_process, receive_test_event, repeat_text} from '${path}/pkg/netsblox_extension_rs.js';
     
     
         await init();
 
         window.ExampleExtension_fns = {};
+		window.ExampleExtension_fns.explode = explode;
 		window.ExampleExtension_fns.hello_name = hello_name;
 		window.ExampleExtension_fns.hello_world = hello_world;
 		window.ExampleExtension_fns.is_even = is_even;
