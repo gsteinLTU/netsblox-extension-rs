@@ -338,8 +338,51 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
     let mut settings: Vec<ExtensionSetting> = vec![];
     let mut fn_names: HashSet<String> = HashSet::new();
 
-    // Parse all items
-    for item in ast.items {
+    // Start with built-in label part specifiers
+    let mut known_label_parts = vec![
+        "obj",
+        "n",
+        "txt",
+        "l",
+        "s",
+        "b",
+        "cmdRing",
+        "repRing",
+        "predRing",
+        "cs",
+        "anyUE",
+        "boolUE",
+        "upvar"
+    ];
+
+    let label_parts_regex = Regex::new(r"(%mult)?%(\w+)")?;
+
+    // Parse label parts
+    for item in &ast.items {
+        // Definitions will be consts
+        if let Item::Const(c) = item {
+            // Check for attributes
+            for attr in &c.attrs {
+                let seg = attr.meta.path().segments.first().unwrap() as &PathSegment;
+                let ident = seg.ident.to_string();
+
+                match ident.as_str() {
+                    "netsblox_extension_label_part" => {
+                        let label_part = recreate_netsblox_extension_label_part(&c);
+                        warn!("Found label part block {:?}", label_part);
+                        label_parts.push((label_part.spec, label_part));
+                        known_label_parts.push(label_part.spec);
+                    },
+                    _ => {}
+                };
+            }
+        }
+    }
+
+    warn!("Known label parts: {:?}", known_label_parts);
+
+    // Parse all other items
+    for item in &ast.items {
         // Definitions will be consts
         if let Item::Const(c) = item {
             // Check for attributes
@@ -351,11 +394,6 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                     "netsblox_extension_info" => {
                         extension_info = Some(recreate_netsblox_extension_info(&c));
                         warn!("Found extension info {:?}", extension_info);
-                    },
-                    "netsblox_extension_label_part" => {
-                        let label_part = recreate_netsblox_extension_label_part(&c);
-                        warn!("Found label part block {:?}", label_part);
-                        label_parts.push((label_part.spec, label_part));
                     },
                     "netsblox_extension_category" => {
                         let category = recreate_netsblox_extension_custom_category(&c);
@@ -384,6 +422,14 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                             warn!("Found custom block {:?}", block);
                             custom_blocks.push((block.name.to_string(), block.clone()));
                             fn_names.insert(block.impl_fn.to_string());
+
+                            // Check if label parts used by block spec are known
+                            for cap in label_parts_regex.captures_iter(block.spec) {
+                                let label_part = cap.get(2).unwrap().as_str();
+                                if !known_label_parts.contains(&label_part) {
+                                    panic!("Unknown label part %{}!", label_part);
+                                }
+                            }
                         } else {
                             warn!("Invalid custom block found");
                         }
@@ -497,8 +543,6 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
 
         let mut blocks_str = "".to_string();
-
-        let label_parts_regex = Regex::new(r"(%mult)?%(\w+)")?;
 
         for (_, block) in &custom_blocks {
             blocks_str += "\t\t\t\tnew Extension.Block(\n";
