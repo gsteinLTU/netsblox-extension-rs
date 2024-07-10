@@ -41,26 +41,26 @@ pub fn hello_world() {
 }
 
 #[wasm_bindgen]
-#[netsblox_extension_block(name = "logHelloName", category = "Hello World", spec = "Log Hello %name", target = netsblox_extension_util::TargetObject::Both)]
+#[netsblox_extension_block(name = "logHelloName", category = "Hello World", spec = "Log Hello %s", target = netsblox_extension_util::TargetObject::Both)]
 pub fn hello_name(name: &str) {
     console::log_1(&format!("Hello {}!", name).to_owned().into());
 }
 
 #[netsblox_extension_label_part]
 const LABEL_PART_TIMES: LabelPart = LabelPart {
-    spec: "%times",
+    spec: "times",
     slot_type: InputSlotMorphOptions { text: Some("times"), is_numeric: true },
 };
 
 #[wasm_bindgen]
-#[netsblox_extension_block(name = "repeatString", category = "operators", spec = "Repeat %text for %times times", target = netsblox_extension_util::TargetObject::Both)]
+#[netsblox_extension_block(name = "repeatString", category = "operators", spec = "Repeat %s for %times times", target = netsblox_extension_util::TargetObject::Both)]
 pub fn repeat_text(text: &str, times: f64) -> String {
     text.repeat(times as usize)
 }
 
 #[netsblox_extension_label_part]
 const LABEL_PART_NUM: LabelPart = LabelPart {
-    spec: "%num",
+    spec: "num",
     slot_type: InputSlotMorphOptions { text: Some("num"), is_numeric: true },
 };
 
@@ -105,4 +105,14 @@ pub fn print_process(this: JsValue) {
 #[netsblox_extension_block(name = "explode", category = "control", spec = "explode", type_override = netsblox_extension_util::BlockType::Terminator)]
 pub fn explode() {
     panic!()
+}
+
+#[wasm_bindgen]
+#[netsblox_extension_block(name = "addAll", category = "operators", spec = "add numbers %mult%num")]
+pub fn add_all(vals: Vec<JsValue>) -> f64 {
+    let mut res = 0.0;
+    for val in vals {
+        res += val.as_f64().unwrap_or_default();
+    }
+    res
 }

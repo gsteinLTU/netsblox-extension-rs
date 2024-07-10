@@ -4,6 +4,7 @@ use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::{HashMap,
 use regex::Regex;
 use simple_error::bail;
 use syn::{Item, PathSegment, ItemConst, Expr, Member, Lit, ItemFn, Attribute, Meta};
+use std::collections::BTreeSet;
 
 #[derive(Debug, Clone, Copy, Default, Serialize)]
 pub struct ExtensionInfo {
@@ -332,14 +333,43 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
     let mut extension_info: Option<ExtensionInfo> = None;
     let mut custom_blocks: Vec<(String, CustomBlock)> = vec![];
-    let mut label_parts: Vec<(String, LabelPart)> = vec![];
+    let mut label_parts: Vec<(&str, LabelPart)> = vec![];
     let mut custom_categories: Vec<(String, CustomCategory)> = vec![];
     let mut menu_items: Vec<(String, String)> = vec![];
     let mut settings: Vec<ExtensionSetting> = vec![];
     let mut fn_names: HashSet<String> = HashSet::new();
 
-    // Parse all items
-    for item in ast.items {
+    // Start with built-in label part specifiers
+    let mut known_label_parts: BTreeSet<&str> = include_str!("builtin-types.txt").lines().map(|x| x.trim()).filter(|x| !x.is_empty()).collect();
+
+    let label_parts_regex = Regex::new(r"(%mult)?%(\w+)")?;
+
+    // Parse label parts
+    for item in &ast.items {
+        // Definitions will be consts
+        if let Item::Const(c) = item {
+            // Check for attributes
+            for attr in &c.attrs {
+                let seg = attr.meta.path().segments.first().unwrap() as &PathSegment;
+                let ident = seg.ident.to_string();
+
+                match ident.as_str() {
+                    "netsblox_extension_label_part" => {
+                        let label_part = recreate_netsblox_extension_label_part(&c);
+                        warn!("Found label part block {:?}", label_part);
+                        label_parts.push((label_part.spec, label_part));
+                        known_label_parts.insert(label_part.spec);
+                    },
+                    _ => {}
+                };
+            }
+        }
+    }
+
+    warn!("Known label parts: {:?}", known_label_parts);
+
+    // Parse all other items
+    for item in &ast.items {
         // Definitions will be consts
         if let Item::Const(c) = item {
             // Check for attributes
@@ -351,11 +381,6 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                     "netsblox_extension_info" => {
                         extension_info = Some(recreate_netsblox_extension_info(&c));
                         warn!("Found extension info {:?}", extension_info);
-                    },
-                    "netsblox_extension_label_part" => {
-                        let label_part = recreate_netsblox_extension_label_part(&c);
-                        warn!("Found label part block {:?}", label_part);
-                        label_parts.push((label_part.spec.to_string(), label_part));
                     },
                     "netsblox_extension_category" => {
                         let category = recreate_netsblox_extension_custom_category(&c);
@@ -384,6 +409,14 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                             warn!("Found custom block {:?}", block);
                             custom_blocks.push((block.name.to_string(), block.clone()));
                             fn_names.insert(block.impl_fn.to_string());
+
+                            // Check if label parts used by block spec are known
+                            for cap in label_parts_regex.captures_iter(block.spec) {
+                                let label_part = cap.get(2).unwrap().as_str();
+                                if !known_label_parts.contains(&label_part) {
+                                    panic!("Unknown label part %{}!", label_part);
+                                }
+                            }
                         } else {
                             warn!("Invalid custom block found");
                         }
@@ -426,7 +459,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         let mut menu_string = "".to_string();
 
         for (label, fn_name) in menu_items {
-            write!(menu_string, "\t\t\t\t'{}': window.{}_fns.{},\n", label, extension_name_no_spaces.as_str(), fn_name).unwrap();
+            write!(menu_string, "\t\t\t\t'{label}': window.{extension_name_no_spaces}_fns.{fn_name},\n").unwrap();
         }
 
         content = content.replace("$MENU", &menu_string);
@@ -498,8 +531,6 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
         let mut blocks_str = "".to_string();
 
-        let label_parts_regex = Regex::new("%(\\w+)")?;
-
         for (_, block) in &custom_blocks {
             blocks_str += "\t\t\t\tnew Extension.Block(\n";
             blocks_str += format!("\t\t\t\t\t'{}',\n", block.name).as_str();
@@ -513,20 +544,8 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             let proc_token = if block.pass_proc { "this, " } else { "" };
             let terminal_token = if block.block_type == BlockType::Terminator { ".terminal()" } else { "" };
 
-            write!(blocks_str, "\t\t\t\t\tfunction ({label_parts_str}) {{ return {extension_name_no_spaces}_fns.{}({proc_token}{label_parts_str}); }}\n", block.impl_fn).unwrap();
+            write!(blocks_str, "\t\t\t\t\tfunction ({label_parts_str}) {{ return window.{extension_name_no_spaces}_fns.{}({proc_token}{label_parts_str}); }}\n", block.impl_fn).unwrap();
             write!(&mut blocks_str, "\t\t\t\t){terminal_token}.for(SpriteMorph, StageMorph),\n").unwrap();
-
-            // Add default label parts
-            for label_part in Regex::new("%\\w+").unwrap().find_iter(block.spec) {
-                let label_part = label_part.as_str();
-
-                if label_parts.iter().find(|(id, _)| id == label_part).is_none() {
-                    label_parts.push((label_part.to_string(), LabelPart {
-                        spec: label_part,
-                        slot_type: InputSlotMorphOptions::default()
-                    }));
-                }
-            }
         }
 
         content = content.replace("$BLOCKS", blocks_str.as_str());
@@ -552,8 +571,8 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
         let mut fn_names = fn_names.iter().cloned().collect::<Vec<String>>();
         fn_names.sort_unstable();
-        content = content.replace("$IMPORTS_LIST", &fn_names.iter().map(|s| s.to_owned()).collect::<Vec<String>>().join(", "));
-        content = content.replace("$WINDOW_IMPORTS", &fn_names.iter().map(|fn_name| format!("\t\twindow.{}_fns.{} = {};", extension_name_no_spaces.as_str(), fn_name, fn_name)).collect::<Vec<String>>().join("\n"));
+        content = content.replace("$IMPORTS_LIST", &fn_names.iter().map(|s| s.to_owned()).collect::<Vec<_>>().join(", "));
+        content = content.replace("$WINDOW_IMPORTS", &fn_names.iter().map(|fn_name| format!("\t\twindow.{extension_name_no_spaces}_fns.{fn_name} = {fn_name};")).collect::<Vec<_>>().join("\n"));
 
         let mut package = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let p = Path::new(package.as_str());
