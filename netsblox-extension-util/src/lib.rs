@@ -426,7 +426,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         let mut menu_string = "".to_string();
 
         for (label, fn_name) in menu_items {
-            write!(menu_string, "\t\t\t\t'{}': window.{}_fns.{},\n", label, extension_name_no_spaces.as_str(), fn_name).unwrap();
+            write!(menu_string, "\t\t\t\t'{label}': window.{extension_name_no_spaces}_fns.{fn_name},\n").unwrap();
         }
 
         content = content.replace("$MENU", &menu_string);
@@ -513,7 +513,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             let proc_token = if block.pass_proc { "this, " } else { "" };
             let terminal_token = if block.block_type == BlockType::Terminator { ".terminal()" } else { "" };
 
-            write!(blocks_str, "\t\t\t\t\tfunction ({label_parts_str}) {{ return {extension_name_no_spaces}_fns.{}({proc_token}{label_parts_str}); }}\n", block.impl_fn).unwrap();
+            write!(blocks_str, "\t\t\t\t\tfunction ({label_parts_str}) {{ return window.{extension_name_no_spaces}_fns.{}({proc_token}{label_parts_str}); }}\n", block.impl_fn).unwrap();
             write!(&mut blocks_str, "\t\t\t\t){terminal_token}.for(SpriteMorph, StageMorph),\n").unwrap();
         }
 
@@ -540,8 +540,8 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
         let mut fn_names = fn_names.iter().cloned().collect::<Vec<String>>();
         fn_names.sort_unstable();
-        content = content.replace("$IMPORTS_LIST", &fn_names.iter().map(|s| s.to_owned()).collect::<Vec<String>>().join(", "));
-        content = content.replace("$WINDOW_IMPORTS", &fn_names.iter().map(|fn_name| format!("\t\twindow.{}_fns.{} = {};", extension_name_no_spaces.as_str(), fn_name, fn_name)).collect::<Vec<String>>().join("\n"));
+        content = content.replace("$IMPORTS_LIST", &fn_names.iter().map(|s| s.to_owned()).collect::<Vec<_>>().join(", "));
+        content = content.replace("$WINDOW_IMPORTS", &fn_names.iter().map(|fn_name| format!("\t\twindow.{extension_name_no_spaces}_fns.{fn_name} = {fn_name};")).collect::<Vec<_>>().join("\n"));
 
         let mut package = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let p = Path::new(package.as_str());
