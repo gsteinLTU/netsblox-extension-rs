@@ -4,6 +4,7 @@ use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::{HashMap,
 use regex::Regex;
 use simple_error::bail;
 use syn::{Item, PathSegment, ItemConst, Expr, Member, Lit, ItemFn, Attribute, Meta};
+use std::collections::BTreeSet;
 
 #[derive(Debug, Clone, Copy, Default, Serialize)]
 pub struct ExtensionInfo {
@@ -339,21 +340,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
     let mut fn_names: HashSet<String> = HashSet::new();
 
     // Start with built-in label part specifiers
-    let mut known_label_parts = vec![
-        "obj",
-        "n",
-        "txt",
-        "l",
-        "s",
-        "b",
-        "cmdRing",
-        "repRing",
-        "predRing",
-        "cs",
-        "anyUE",
-        "boolUE",
-        "upvar"
-    ];
+    let mut known_label_parts: BTreeSet<&str> = include_str!("builtin-types.txt").lines().map(|x| x.trim()).filter(|x| !x.is_empty()).collect();
 
     let label_parts_regex = Regex::new(r"(%mult)?%(\w+)")?;
 
@@ -371,7 +358,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                         let label_part = recreate_netsblox_extension_label_part(&c);
                         warn!("Found label part block {:?}", label_part);
                         label_parts.push((label_part.spec, label_part));
-                        known_label_parts.push(label_part.spec);
+                        known_label_parts.insert(label_part.spec);
                     },
                     _ => {}
                 };
