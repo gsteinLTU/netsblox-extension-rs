@@ -56,12 +56,13 @@ $LABELPARTS
     var s = document.createElement('script');
     s.type = "module";
     s.innerHTML = `import init, {$IMPORTS_LIST} from '${path}/pkg/$PACKAGE_NAME.js';
-    
-    
+
         await init();
 
         window.$NO_SPACE_EXTENSION_NAME_fns = {};
 $WINDOW_IMPORTS
+
+$SETUP_FUNC
         `;
     document.body.appendChild(s);
 })();

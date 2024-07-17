@@ -116,3 +116,9 @@ pub fn add_all(vals: Vec<JsValue>) -> f64 {
     }
     res
 }
+
+#[wasm_bindgen]
+#[netsblox_extension_setup]
+pub fn setup() {
+    console::log_1(&"doing setup stuff...".into());
+}

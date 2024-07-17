@@ -199,9 +199,8 @@
     path = path.substring(0, path.lastIndexOf("/"));
     var s = document.createElement('script');
     s.type = "module";
-    s.innerHTML = `import init, {add_all, explode, hello_name, hello_world, is_even, print_extension_name, print_hello_world, print_process, receive_test_event, repeat_text} from '${path}/pkg/netsblox_extension_rs.js';
-    
-    
+    s.innerHTML = `import init, {add_all, explode, hello_name, hello_world, is_even, print_extension_name, print_hello_world, print_process, receive_test_event, repeat_text, setup} from '${path}/pkg/netsblox_extension_rs.js';
+
         await init();
 
         window.ExampleExtension_fns = {};
@@ -215,6 +214,9 @@
 		window.ExampleExtension_fns.print_process = print_process;
 		window.ExampleExtension_fns.receive_test_event = receive_test_event;
 		window.ExampleExtension_fns.repeat_text = repeat_text;
+		window.ExampleExtension_fns.setup = setup;
+
+		setup();
         `;
     document.body.appendChild(s);
 })();

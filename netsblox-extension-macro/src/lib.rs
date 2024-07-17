@@ -29,3 +29,8 @@ pub fn netsblox_extension_menu_item(_attr: TokenStream, item: TokenStream) -> To
 pub fn netsblox_extension_setting(_attr: TokenStream, item: TokenStream) -> TokenStream {
     item
 }
+
+#[proc_macro_attribute]
+pub fn netsblox_extension_setup(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    item
+}

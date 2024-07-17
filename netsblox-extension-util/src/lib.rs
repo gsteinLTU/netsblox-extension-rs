@@ -338,6 +338,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
     let mut menu_items: Vec<(String, String)> = vec![];
     let mut settings: Vec<ExtensionSetting> = vec![];
     let mut fn_names: HashSet<String> = HashSet::new();
+    let mut setup_func: Option<String> = None;
 
     // Start with built-in label part specifiers
     let mut known_label_parts: BTreeSet<&str> = include_str!("builtin-types.txt").lines().map(|x| x.trim()).filter(|x| !x.is_empty()).collect();
@@ -402,6 +403,20 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
                 let ident = seg.ident.to_string();
 
                 match ident.as_str() {
+                    "netsblox_extension_setup" => {
+                        let name = f.sig.ident.to_string();
+                        warn!("Found setup function {name:?}");
+
+                        if f.sig.inputs.len() != 0 {
+                            panic!("Setup function cannot have inputs!");
+                        }
+                        if let Some(prev_setup) = &setup_func {
+                            panic!("Multiple setup functions encountered! ({prev_setup} and {name})");
+                        }
+
+                        fn_names.insert(name.clone());
+                        setup_func = Some(name);
+                    }
                     "netsblox_extension_block" => {
                         let block = recreate_netsblox_extension_block(&f, attr);
 
@@ -573,6 +588,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
         fn_names.sort_unstable();
         content = content.replace("$IMPORTS_LIST", &fn_names.iter().map(|s| s.to_owned()).collect::<Vec<_>>().join(", "));
         content = content.replace("$WINDOW_IMPORTS", &fn_names.iter().map(|fn_name| format!("\t\twindow.{extension_name_no_spaces}_fns.{fn_name} = {fn_name};")).collect::<Vec<_>>().join("\n"));
+        content = content.replace("$SETUP_FUNC", &setup_func.map(|f| format!("\t\t{f}();")).unwrap_or_default());
 
         let mut package = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let p = Path::new(package.as_str());
@@ -582,7 +598,6 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
         let mut out_file = File::create("./index.js")?;
         out_file.write_all(content.as_bytes())?;
-
     } else {
         bail!("No ExtensionInfo found!");
     }
