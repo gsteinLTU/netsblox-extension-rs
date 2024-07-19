@@ -219,7 +219,19 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
         instance.block_type = match &item.sig.output {
             syn::ReturnType::Default => BlockType::Command,
             syn::ReturnType::Type(_, b) => match b.as_ref() {
-                syn::Type::Path(p) if &p.path.segments.first().unwrap().ident.to_string() == "bool" => BlockType::Predicate,
+                syn::Type::Tuple(t) if t.elems.is_empty() => BlockType::Command,
+                syn::Type::Path(p) if p.path.segments.first().unwrap().ident.to_string() == "bool" => BlockType::Predicate,
+                syn::Type::Path(p) if p.path.segments.first().unwrap().ident.to_string() == "Result" => match &p.path.segments.first().unwrap().arguments {
+                    syn::PathArguments::AngleBracketed(x) => match x.args.first().unwrap() {
+                        syn::GenericArgument::Type(c) => match c {
+                            syn::Type::Tuple(t) if t.elems.is_empty() => BlockType::Command,
+                            syn::Type::Path(p) if p.path.segments.first().unwrap().ident.to_string() == "bool" => BlockType::Predicate,
+                            _ => BlockType::Reporter
+                        }
+                        _ => BlockType::Reporter
+                    }
+                    _ => BlockType::Reporter
+                }
                 _ => BlockType::Reporter
             },
         };
