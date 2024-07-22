@@ -116,3 +116,27 @@ pub fn add_all(vals: Vec<JsValue>) -> f64 {
     }
     res
 }
+
+#[wasm_bindgen]
+#[netsblox_extension_block(name = "explicitCommand", category = "control", spec = "explicit command")]
+pub fn explicit_command() -> () {
+    ()
+}
+
+#[wasm_bindgen]
+#[netsblox_extension_block(name = "fallibleCommand", category = "control", spec = "fallible command")]
+pub fn fallible_command() -> Result<(), f64> {
+    Ok(())
+}
+
+#[wasm_bindgen]
+#[netsblox_extension_block(name = "fallibleReporter", category = "control", spec = "fallible reporter")]
+pub fn fallible_reporter() -> Result<f64, f64> {
+    Ok(12.5)
+}
+
+#[wasm_bindgen]
+#[netsblox_extension_block(name = "falliblePredicate", category = "control", spec = "fallible predicate")]
+pub fn fallible_predicate() -> Result<bool, f64> {
+    Ok(true)
+}
