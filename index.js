@@ -62,6 +62,7 @@
 						new Extension.Palette.Block('fallibleCommand'),
 						new Extension.Palette.Block('fallibleReporter'),
 						new Extension.Palette.Block('falliblePredicate'),
+						new Extension.Palette.Block('pickyboi'),
 					],
 					SpriteMorph
 				),
@@ -75,6 +76,7 @@
 						new Extension.Palette.Block('fallibleCommand'),
 						new Extension.Palette.Block('fallibleReporter'),
 						new Extension.Palette.Block('falliblePredicate'),
+						new Extension.Palette.Block('pickyboi'),
 					],
 					StageMorph
 				),
@@ -198,6 +200,14 @@
 					[],
 					function () { return window.ExampleExtension_fns.fallible_predicate(); }
 				).for(SpriteMorph, StageMorph),
+				new Extension.Block(
+					'pickyboi',
+					'reporter',
+					'control',
+					'picky boi %picky',
+					[],
+					function (v0) { return window.ExampleExtension_fns.picky_boi(v0); }
+				).for(SpriteMorph, StageMorph),
 
             ];
         }
@@ -209,9 +219,9 @@
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
-							true, // is numeric
-							null,
-							false
+							true, // numeric
+							null, // options
+							false // readonly
 						);
 						return part;
 					}
@@ -221,9 +231,21 @@
 					() => {
 						const part = new InputSlotMorph(
 							null, // text
-							true, // is numeric
-							null,
-							false
+							true, // numeric
+							null, // options
+							false // readonly
+						);
+						return part;
+					}
+				),
+				new Extension.LabelPart(
+					'picky',
+					() => {
+						const part = new InputSlotMorph(
+							null, // text
+							true, // numeric
+							{"hello": "world","another": "option","nesting": {"deeper 1": {"deep 1": "deep val 1",},"deeper 2": {"deep 2": "deep val 2",},},"more stuff": {"thing": "some stuff","last one": "done",},}, // options
+							true // readonly
 						);
 						return part;
 					}
@@ -239,7 +261,7 @@
     path = path.substring(0, path.lastIndexOf("/"));
     var s = document.createElement('script');
     s.type = "module";
-    s.innerHTML = `import init, {add_all, explicit_command, explode, fallible_command, fallible_predicate, fallible_reporter, hello_name, hello_world, is_even, print_extension_name, print_hello_world, print_process, receive_test_event, repeat_text} from '${path}/pkg/netsblox_extension_rs.js';
+    s.innerHTML = `import init, {add_all, explicit_command, explode, fallible_command, fallible_predicate, fallible_reporter, hello_name, hello_world, is_even, picky_boi, print_extension_name, print_hello_world, print_process, receive_test_event, repeat_text} from '${path}/pkg/netsblox_extension_rs.js';
     
     
         await init();
@@ -254,6 +276,7 @@
 		window.ExampleExtension_fns.hello_name = hello_name;
 		window.ExampleExtension_fns.hello_world = hello_world;
 		window.ExampleExtension_fns.is_even = is_even;
+		window.ExampleExtension_fns.picky_boi = picky_boi;
 		window.ExampleExtension_fns.print_extension_name = print_extension_name;
 		window.ExampleExtension_fns.print_hello_world = print_hello_world;
 		window.ExampleExtension_fns.print_process = print_process;

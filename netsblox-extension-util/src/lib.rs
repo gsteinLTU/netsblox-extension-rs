@@ -3,7 +3,7 @@ use serde::Serialize;
 use std::{fs::File, error::Error, io::{Read, Write}, vec, collections::{HashMap, HashSet}, path::Path, fmt::Write as FmtWrite};
 use regex::Regex;
 use simple_error::bail;
-use syn::{Item, PathSegment, ItemConst, Expr, Member, Lit, ItemFn, Attribute, Meta};
+use syn::{Attribute, Expr, ExprCall, ExprPath, ExprLit, ExprReference, ExprArray, ExprStruct, Lit, Item, ItemConst, ItemFn, Member, Meta, PathSegment};
 use std::collections::BTreeSet;
 
 #[derive(Debug, Clone, Copy, Default, Serialize)]
@@ -42,16 +42,25 @@ pub enum BlockType {
     Hat
 }
 
-#[derive(Debug, Clone, Copy, Default, Serialize)]
-pub struct InputSlotMorphOptions {
-    pub text: Option<&'static str>,
-    pub is_numeric: bool
+#[derive(Debug, Clone, Copy, Serialize)]
+pub enum Menu {
+    Entry {
+        label: &'static str,
+        value: &'static str,
+    },
+    Submenu {
+        label: &'static str,
+        content: &'static [Menu],
+    },
 }
 
-#[derive(Debug,Clone, Copy, Default, Serialize)]
+#[derive(Debug,Clone, Copy, Serialize)]
 pub struct LabelPart {
     pub spec: &'static str,
-    pub slot_type: InputSlotMorphOptions
+    pub text: Option<&'static str>,
+    pub numeric: bool,
+    pub menu: Option<&'static [Menu]>,
+    pub readonly: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize)]
@@ -89,6 +98,29 @@ macro_rules! warn {
     ($($tokens: tt)*) => {
         println!("cargo:warning={}", format!($($tokens)*))
     }
+}
+
+fn format_menu(menu: &[Menu]) -> String {
+    fn visitor(menu: &Menu, res: &mut String) {
+        match menu {
+            Menu::Entry { label, value } => write!(res, "{label:?}: {value:?},").unwrap(),
+            Menu::Submenu { label, content } => {
+                write!(res, "{label:?}: {{").unwrap();
+                for x in *content {
+                    visitor(x, res);
+                }
+                res.push_str("},");
+            }
+        }
+    }
+
+    let mut res = String::new();
+    res.push('{');
+    for x in menu {
+        visitor(x, &mut res);
+    }
+    res.push('}');
+    res
 }
 
 // Turn syn item into instance
@@ -243,41 +275,38 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
 
 // Turn syn item into instance
 fn recreate_netsblox_extension_label_part(item: &ItemConst) -> LabelPart {
-    let mut instance = LabelPart::default();
+    let mut spec: Option<&'static str> = None;
+    let mut text: Option<Option<&'static str>> = None;
+    let mut menu: Option<Option<&[Menu]>> = None;
+    let mut numeric: Option<bool> = None;
+    let mut readonly: Option<bool> = None;
 
-    if let Expr::Struct(s) = &*item.expr {
-        for field in &s.fields {
-            if let Member::Named(named) = &field.member {
-
-                let name = named.to_string();
-                {
-                    match name.as_str() {
-                        "spec" => instance.spec = extract_string(&field.expr),
-                        "slot_type" => {
-                            if let Expr::Struct(slot_type) = &field.expr {
-                                let mut slot_type_instance = InputSlotMorphOptions::default();
-
-                                for field in &slot_type.fields {
-
-                                    if let Member::Named(named) = &field.member {
-                                        match named.to_string().as_str() {
-                                            "text" => slot_type_instance.text = Some(extract_string(&field.expr)),
-                                            "is_numeric" => slot_type_instance.is_numeric = extract_bool(&field.expr),
-                                            _ => warn!("Unknown input slot morph options field {}", named.to_string())
-                                        }
-                                    }
-                                }
-
-                                instance.slot_type = slot_type_instance;
-                            }
-                        },
-                        _ => warn!("Unknown field: {}", name)
+    match &*item.expr {
+        Expr::Struct(s) => {
+            for field in &s.fields {
+                match &field.member {
+                    Member::Named(name) => match name.to_string().as_str() {
+                        "spec" => spec = Some(extract_string(&field.expr)),
+                        "text" => text = Some(extract_option(&field.expr, extract_string)),
+                        "numeric" => numeric = Some(extract_bool(&field.expr)),
+                        "menu" => menu = Some(extract_option(&field.expr, |x| extract_slice(x, &extract_menu))),
+                        "readonly" => readonly = Some(extract_bool(&field.expr)),
+                        x => panic!("unknown label part field: {x}"),
                     }
+                    x => panic!("unknown label part field member: {x:?}"),
                 }
             }
         }
+        x => panic!("unknown label part expr: {x:?}"),
     }
-    instance
+
+    LabelPart {
+        spec: spec.expect("missing spec field"),
+        text: text.expect("missing text field"),
+        numeric: numeric.expect("missing numeric field"),
+        menu: menu.expect("missing menu field"),
+        readonly: readonly.expect("missing readonly field"),
+    }
 }
 
 fn recreate_netsblox_extension_setting(item: &ItemConst) -> ExtensionSetting {
@@ -304,36 +333,89 @@ fn recreate_netsblox_extension_setting(item: &ItemConst) -> ExtensionSetting {
     instance
 }
 
-fn extract_string(expr: &syn::Expr) -> &'static str {
-    if let Expr::Lit(lit) = expr {
-        if let Lit::Str(val) = &lit.lit {
-            let val = val.value();
-            // Leaking would be bad, but this script has a short life
-            return Box::leak(val.into_boxed_str());
-        }
-    }
+fn extract_menu(expr: &Expr) -> Menu {
+    match expr {
+        Expr::Struct(ExprStruct { attrs: _, qself: _, path, brace_token: _, fields, dot2_token: _, rest: _ }) if path.segments.len() == 2 && path.segments.first().unwrap().ident.to_string() == "Menu" => match path.segments.last().unwrap().ident.to_string().as_str() {
+            "Entry" => {
+                let mut label: Option<&'static str> = None;
+                let mut value: Option<&'static str> = None;
 
-    ""
+                for field in fields {
+                    match &field.member {
+                        Member::Named(name) if name.to_string() == "label" => label = Some(extract_string(&field.expr)),
+                        Member::Named(name) if name.to_string() == "value" => value = Some(extract_string(&field.expr)),
+                        x => panic!("unknown menu entry field: {x:?}"),
+                    }
+                }
+
+                Menu::Entry {
+                    label: label.expect("missing menu entry label field"),
+                    value: value.expect("missing menu entry value field"),
+                }
+            }
+            "Submenu" => {
+                let mut label: Option<&'static str> = None;
+                let mut content: Option<&'static [Menu]> = None;
+
+                for field in fields {
+                    match &field.member {
+                        Member::Named(name) if name.to_string() == "label" => label = Some(extract_string(&field.expr)),
+                        Member::Named(name) if name.to_string() == "content" => content = Some(extract_slice(&field.expr, &extract_menu)),
+                        x => panic!("unknown menu submenu field: {x:?}"),
+                    }
+                }
+
+                Menu::Submenu {
+                    label: label.expect("missing menu submenu label field"),
+                    content: content.expect("missing menu submenu content field"),
+                }
+            }
+            x => panic!("unknown menu variant: {x:?}"),
+        }
+        x => panic!("unknown menu expr: {x:?}"),
+    }
+}
+
+fn extract_option<T, F: FnOnce(&Expr) -> T>(expr: &Expr, parser: F) -> Option<T> {
+    match expr {
+        Expr::Call(ExprCall { attrs: _, func, paren_token: _, args }) => match &**func {
+            Expr::Path(ExprPath { attrs: _, qself: _, path }) if path.segments.len() == 1 && path.segments.first().unwrap().ident.to_string() == "Some" && args.len() == 1 => Some(parser(args.first().unwrap())),
+            x => panic!("unknown option call expr: {x:?}"),
+        }
+        Expr::Path(ExprPath { attrs: _, qself: _, path }) if path.segments.len() == 1 && path.segments.first().unwrap().ident.to_string() == "None" => None,
+        x => panic!("unknown option expr: {x:?}"),
+    }
+}
+
+fn extract_slice<T, F: Fn(&Expr) -> T>(expr: &Expr, parser: &F) -> &'static [T] {
+    match expr {
+        Expr::Reference(ExprReference { attrs: _, and_token: _, mutability: _, expr }) => match &**expr {
+            Expr::Array(ExprArray { attrs: _, bracket_token: _, elems }) => elems.iter().map(parser).collect::<Vec<_>>().leak(),
+            x => panic!("unknown slice ref expr: {x:?}"),
+        }
+        x => panic!("unknown slice expr: {x:?}"),
+    }
+}
+
+fn extract_string(expr: &syn::Expr) -> &'static str {
+    match expr {
+        Expr::Lit(ExprLit { attrs: _, lit: Lit::Str(v) }) => v.value().leak(), // Leaking would be bad, but this script has a short life
+        x => panic!("unknown string expr: {x:?}"),
+    }
 }
 
 fn extract_bool(expr: &syn::Expr) -> bool {
-    if let Expr::Lit(lit) = expr {
-        if let Lit::Bool(val) = &lit.lit {
-            return val.value;
-        }
+    match expr {
+        Expr::Lit(ExprLit { attrs: _, lit: Lit::Bool(v) }) => v.value,
+        x => panic!("unknown bool expr: {x:?}"),
     }
-
-    false
 }
 
 fn extract_f64(expr: &syn::Expr) -> f64 {
-    if let Expr::Lit(lit) = expr {
-        if let Lit::Float(val) = &lit.lit {
-            return val.base10_parse().unwrap();
-        }
+    match expr {
+        Expr::Lit(ExprLit { attrs: _, lit: Lit::Float(v) }) => v.base10_parse().unwrap(),
+        x => panic!("unknown f64 expr: {x:?}"),
     }
-
-    0.0
 }
 
 pub fn build() -> Result<(), Box<dyn Error>>  {
@@ -569,10 +651,10 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             label_parts_string += format!("\t\t\t\t\t'{}',\n", label_part.spec).as_str();
             label_parts_string += "\t\t\t\t\t() => {\n";
             label_parts_string += "\t\t\t\t\t\tconst part = new InputSlotMorph(\n";
-            label_parts_string += "\t\t\t\t\t\t\tnull, // text\n";
-            label_parts_string += format!("\t\t\t\t\t\t\t{}, // is numeric\n", label_part.slot_type.is_numeric).as_str();
-            label_parts_string += "\t\t\t\t\t\t\tnull,\n";
-            label_parts_string += "\t\t\t\t\t\t\tfalse\n";
+            label_parts_string += format!("\t\t\t\t\t\t\t{}, // text\n", label_part.text.map(|x| format!("{x:?}")).unwrap_or_else(|| "null".into())).as_str();
+            label_parts_string += format!("\t\t\t\t\t\t\t{}, // numeric\n", label_part.numeric).as_str();
+            label_parts_string += format!("\t\t\t\t\t\t\t{}, // options\n", label_part.menu.map(|x| format_menu(x)).unwrap_or_else(|| "null".into())).as_str();
+            label_parts_string += format!("\t\t\t\t\t\t\t{} // readonly\n", label_part.readonly).as_str();
             label_parts_string += "\t\t\t\t\t\t);\n";
             label_parts_string += "\t\t\t\t\t\treturn part;\n";
             label_parts_string += "\t\t\t\t\t}\n";

@@ -49,7 +49,10 @@ pub fn hello_name(name: &str) {
 #[netsblox_extension_label_part]
 const LABEL_PART_TIMES: LabelPart = LabelPart {
     spec: "times",
-    slot_type: InputSlotMorphOptions { text: Some("times"), is_numeric: true },
+    text: None,
+    numeric: true,
+    menu: None,
+    readonly: false,
 };
 
 #[wasm_bindgen]
@@ -61,7 +64,34 @@ pub fn repeat_text(text: &str, times: f64) -> String {
 #[netsblox_extension_label_part]
 const LABEL_PART_NUM: LabelPart = LabelPart {
     spec: "num",
-    slot_type: InputSlotMorphOptions { text: Some("num"), is_numeric: true },
+    text: None,
+    numeric: true,
+    menu: None,
+    readonly: false,
+};
+
+#[netsblox_extension_label_part]
+const LABEL_PART_MENU: LabelPart = LabelPart {
+    spec: "picky",
+    text: None,
+    numeric: true,
+    menu: Some(&[
+        Menu::Entry { label: "hello", value: "world" },
+        Menu::Entry { label: "another", value: "option" },
+        Menu::Submenu { label: "nesting", content: &[
+            Menu::Submenu { label: "deeper 1", content: &[
+                Menu::Entry { label: "deep 1", value: "deep val 1" },
+            ] },
+            Menu::Submenu { label: "deeper 2", content: &[
+                Menu::Entry { label: "deep 2", value: "deep val 2" },
+            ] },
+        ] },
+        Menu::Submenu { label: "more stuff", content: &[
+            Menu::Entry { label: "thing", value: "some stuff" },
+            Menu::Entry { label: "last one", value: "done" },
+        ] },
+    ]),
+    readonly: true,
 };
 
 #[wasm_bindgen]
@@ -139,4 +169,10 @@ pub fn fallible_reporter() -> Result<f64, f64> {
 #[netsblox_extension_block(name = "falliblePredicate", category = "control", spec = "fallible predicate")]
 pub fn fallible_predicate() -> Result<bool, f64> {
     Ok(true)
+}
+
+#[wasm_bindgen]
+#[netsblox_extension_block(name = "pickyboi", category = "control", spec = "picky boi %picky")]
+pub fn picky_boi(v: &JsValue) -> JsValue {
+    v.clone()
 }
