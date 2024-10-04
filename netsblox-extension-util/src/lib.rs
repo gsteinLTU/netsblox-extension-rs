@@ -25,9 +25,10 @@ macro_rules! extract_tuple {
 }
 
 macro_rules! try_construct {
-    ($t:ident$(::$tt:ident)* { $($f:ident),*$(,)? }) => {
-        $t$(::$tt)* { $($f: $f.expect(&format!("missing {} field: {}", stringify!($t), stringify!($f)))),* }
-    };
+    ($t:ident$(::$tt:ident)* { $($f:ident),*$(,)? }) => {{
+        let ty_name = stringify!($t$(::$tt)*);
+        $t$(::$tt)* { $($f: $f.expect(&format!("missing {ty_name} field: {}", stringify!($f)))),* }
+    }};
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
