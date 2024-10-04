@@ -57,11 +57,15 @@
 					[
 						new Extension.Palette.Block('receiveTestEvent'),
 						new Extension.Palette.Block('printProcess'),
+						'-',
 						new Extension.Palette.Block('explode'),
+						'-',
 						new Extension.Palette.Block('explicitCommand'),
 						new Extension.Palette.Block('fallibleCommand'),
+						'-',
 						new Extension.Palette.Block('fallibleReporter'),
 						new Extension.Palette.Block('falliblePredicate'),
+						'-',
 						new Extension.Palette.Block('pickyboi'),
 					],
 					SpriteMorph
@@ -71,11 +75,15 @@
 					[
 						new Extension.Palette.Block('receiveTestEvent'),
 						new Extension.Palette.Block('printProcess'),
+						'-',
 						new Extension.Palette.Block('explode'),
+						'-',
 						new Extension.Palette.Block('explicitCommand'),
 						new Extension.Palette.Block('fallibleCommand'),
+						'-',
 						new Extension.Palette.Block('fallibleReporter'),
 						new Extension.Palette.Block('falliblePredicate'),
+						'-',
 						new Extension.Palette.Block('pickyboi'),
 					],
 					StageMorph

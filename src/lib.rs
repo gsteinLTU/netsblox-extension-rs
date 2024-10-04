@@ -132,7 +132,7 @@ pub fn print_process(this: JsValue) {
 }
 
 #[wasm_bindgen]
-#[netsblox_extension_block(name = "explode", category = "control", spec = "explode", type_override = netsblox_extension_util::BlockType::Terminator)]
+#[netsblox_extension_block(name = "explode", category = "control", spec = "explode", type_override = netsblox_extension_util::BlockType::Terminator, pad_top = true, pad_bottom = true)]
 pub fn explode() {
     panic!()
 }
@@ -160,13 +160,13 @@ pub fn fallible_command() -> Result<(), f64> {
 }
 
 #[wasm_bindgen]
-#[netsblox_extension_block(name = "fallibleReporter", category = "control", spec = "fallible reporter")]
+#[netsblox_extension_block(name = "fallibleReporter", category = "control", spec = "fallible reporter", pad_top = true)]
 pub fn fallible_reporter() -> Result<f64, f64> {
     Ok(12.5)
 }
 
 #[wasm_bindgen]
-#[netsblox_extension_block(name = "falliblePredicate", category = "control", spec = "fallible predicate")]
+#[netsblox_extension_block(name = "falliblePredicate", category = "control", spec = "fallible predicate", pad_bottom = true)]
 pub fn fallible_predicate() -> Result<bool, f64> {
     Ok(true)
 }

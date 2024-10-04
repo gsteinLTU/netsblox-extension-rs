@@ -45,6 +45,8 @@ pub struct CustomBlock {
     pub impl_fn: &'static str,
     pub target: TargetObject,
     pub pass_proc: bool,
+    pub pad_top: bool,
+    pub pad_bottom: bool,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -203,6 +205,8 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
     let mut pass_proc: Option<bool> = None;
     let mut impl_fn: Option<&'static str> = None;
     let mut block_type: Option<BlockType> = None;
+    let mut pad_top: Option<bool> = None;
+    let mut pad_bottom: Option<bool> = None;
 
     // Parse information stored in attribute
     if let Meta::List(l) = &attr.meta {
@@ -218,6 +222,8 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
                     "pass_proc" => pass_proc = Some(extract_bool_meta(value)),
                     "type_override" | "block_type" => block_type = Some(extract_block_type_meta(value)), // Allows for overriding block types if desired, or to make hat/terminal blocks possible
                     "target" => target = Some(extract_target_object_meta(value)),
+                    "pad_top" => pad_top = Some(extract_bool_meta(value)),
+                    "pad_bottom" => pad_bottom = Some(extract_bool_meta(value)),
                     x => panic!("unknown extension block attr field: {x:?}"),
                 }
                 x => panic!("unknown meta attr format: {x:?}"),
@@ -225,15 +231,12 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
         }
     }
 
-    if defaults.is_none() {
-        defaults = Some("[]");
-    }
-    if target.is_none() {
-        target = Some(TargetObject::Both);
-    }
-    if pass_proc.is_none() {
-        pass_proc = Some(false);
-    }
+    if pad_top.is_none() { pad_top = Some(false); }
+    if pad_bottom.is_none() { pad_bottom = Some(false); }
+    if defaults.is_none() { defaults = Some("[]"); }
+    if target.is_none() { target = Some(TargetObject::Both); }
+    if pass_proc.is_none() { pass_proc = Some(false); }
+
     if impl_fn.is_none() {
         impl_fn = Some(Box::leak(item.sig.ident.to_string().into_boxed_str())); // Get information from function signature
     }
@@ -259,7 +262,7 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
         });
     }
 
-    try_construct!(CustomBlock { name, block_type, category, spec, defaults, impl_fn, target, pass_proc })
+    try_construct!(CustomBlock { name, block_type, category, spec, defaults, impl_fn, target, pass_proc, pad_top, pad_bottom })
 }
 
 // Turn syn item into instance
@@ -604,52 +607,40 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
         let mut palette_string = "".to_string();
 
-        let mut categories_map: HashMap<String, Vec<String>> = HashMap::new();
+        let mut categories_map: HashMap<String, Vec<&CustomBlock>> = HashMap::new();
 
         for (_, block) in &custom_blocks {
             let block_cat = serde_json::to_string(&block.category)?.strip_prefix('\"').unwrap().strip_suffix('\"').unwrap().to_string();
-
-            if !categories_map.contains_key(&block_cat) {
-                categories_map.insert(block_cat.clone(), vec![]);
-            }
-
-            categories_map.get_mut(&block_cat).unwrap().push(block.name.to_string());
+            categories_map.entry(block_cat).or_default().push(block);
         }
-
 
         let mut cat_names: Vec<_> = categories_map.keys().collect();
         cat_names.sort_unstable();
 
         for category in cat_names {
-            palette_string += "\t\t\t\tnew Extension.PaletteCategory(\n";
-            palette_string += format!("\t\t\t\t\t'{}',\n", category).as_str();
-            palette_string += "\t\t\t\t\t[\n";
-            for block_name in categories_map.get(category).unwrap() {
-                let get = &custom_blocks.iter().find(|(b, _)| b == block_name).unwrap().1;
-                if get.target == TargetObject::SpriteMorph || get.target == TargetObject::Both {
-                    write!(palette_string, "\t\t\t\t\t\tnew Extension.Palette.Block('{}'),\n", block_name).unwrap();
+            for target in [TargetObject::SpriteMorph, TargetObject::StageMorph] {
+                palette_string += "\t\t\t\tnew Extension.PaletteCategory(\n";
+                palette_string += format!("\t\t\t\t\t'{}',\n", category).as_str();
+                palette_string += "\t\t\t\t\t[\n";
+                for block in categories_map.get(category).unwrap() {
+                    let get = &custom_blocks.iter().find(|(b, _)| b == block.name).unwrap().1;
+                    if get.target == target || get.target == TargetObject::Both {
+                        if block.pad_top {
+                            palette_string.push_str("\t\t\t\t\t\t'-',\n");
+                        }
+                        write!(palette_string, "\t\t\t\t\t\tnew Extension.Palette.Block('{}'),\n", block.name).unwrap();
+                        if block.pad_bottom {
+                            palette_string.push_str("\t\t\t\t\t\t'-',\n");
+                        }
+                    }
                 }
+                palette_string += "\t\t\t\t\t],\n";
+                palette_string += format!("\t\t\t\t\t{target:?}\n").as_str();
+                palette_string += "\t\t\t\t),\n";
             }
-            palette_string += "\t\t\t\t\t],\n";
-            palette_string += "\t\t\t\t\tSpriteMorph\n";
-            palette_string += "\t\t\t\t),\n";
-
-            palette_string += "\t\t\t\tnew Extension.PaletteCategory(\n";
-            palette_string += format!("\t\t\t\t\t'{}',\n", category).as_str();
-            palette_string += "\t\t\t\t\t[\n";
-            for block_name in categories_map.get(category).unwrap() {
-                let get = &custom_blocks.iter().find(|(b, _)| b == block_name).unwrap().1;
-                if get.target == TargetObject::StageMorph || get.target == TargetObject::Both {
-                    write!(palette_string, "\t\t\t\t\t\tnew Extension.Palette.Block('{}'),\n", block_name).unwrap();
-                }
-            }
-            palette_string += "\t\t\t\t\t],\n";
-            palette_string += "\t\t\t\t\tStageMorph\n";
-            palette_string += "\t\t\t\t),\n";
         }
 
         content = content.replace("$PALETTE", &palette_string);
-
 
         let mut blocks_str = "".to_string();
 
