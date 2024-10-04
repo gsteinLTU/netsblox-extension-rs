@@ -1,6 +1,6 @@
 [package]
 name = "netsblox-extension-util"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
 authors = ["Gordon Stein"]
 license = "MIT OR Apache-2.0"
@@ -11,18 +11,18 @@ description = "Allows for automatic generation of a NetsBlox extension that uses
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = {version = "1.0.163", features = ["derive"]}
-syn = { version = "2.0.16", features = ["full", "extra-traits"] }
-simple-error = { version = "0.3.0" }
-serde_json = { version = "1.0.96" }
-regex = { version = "1.8.2" }
-proc-macro2 = { version = "1.0.59" }
-web-sys = { version = "0.3.63", features = ["Storage", "Window", "Document"] }
+serde = {version = "1.0", features = ["derive"]}
+syn = { version = "2.0", features = ["full", "extra-traits"] }
+simple-error = { version = "0.3.1" }
+serde_json = { version = "1.0" }
+regex = { version = "1.11" }
+proc-macro2 = { version = "1.0" }
+web-sys = { version = "0.3", features = ["Storage", "Window", "Document"] }
 
 [build-dependencies]
-serde = {version = "1.0.163", features = ["derive"]}
-syn = { version = "2.0.16", features = ["full", "extra-traits"] }
-simple-error = { version = "0.3.0" }
-serde_json = { version = "1.0.96" }
-regex = { version = "1.8.2" }
-proc-macro2 = { version = "1.0.59" }
+serde = {version = "1.0", features = ["derive"]}
+syn = { version = "2.0", features = ["full", "extra-traits"] }
+simple-error = { version = "0.3" }
+serde_json = { version = "1.0" }
+regex = { version = "1.11" }
+proc-macro2 = { version = "1.0" }
