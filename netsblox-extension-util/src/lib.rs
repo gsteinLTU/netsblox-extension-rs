@@ -659,7 +659,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             blocks_str += format!("\t\t\t\t\t'{}',\n", serde_json::to_string(&block.block_type)?.strip_prefix("\"").unwrap().strip_suffix("\"").unwrap()).as_str();
             blocks_str += format!("\t\t\t\t\t'{}',\n", serde_json::to_string(&block.category)?.strip_prefix("\"").unwrap().strip_suffix("\"").unwrap()).as_str();
             blocks_str += format!("\t\t\t\t\t'{}',\n", block.spec).as_str();
-            blocks_str += "\t\t\t\t\t[],\n";
+            blocks_str += format!("\t\t\t\t\t{},\n", block.defaults).as_str();
 
             let label_parts_str = label_parts_regex.captures_iter(block.spec).enumerate().map(|(i, _)| format!("v{i}")).collect::<Vec<_>>().join(", ");
 

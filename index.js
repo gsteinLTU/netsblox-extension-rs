@@ -86,6 +86,7 @@
 						new Extension.Palette.Block('repeatString'),
 						new Extension.Palette.Block('isEven'),
 						new Extension.Palette.Block('addAll'),
+						new Extension.Palette.Block('defaultAdder'),
 					],
 					SpriteMorph
 				),
@@ -95,6 +96,7 @@
 						new Extension.Palette.Block('repeatString'),
 						new Extension.Palette.Block('isEven'),
 						new Extension.Palette.Block('addAll'),
+						new Extension.Palette.Block('defaultAdder'),
 					],
 					StageMorph
 				),
@@ -208,6 +210,14 @@
 					[],
 					function (v0) { return window.ExampleExtension_fns.picky_boi(v0); }
 				).for(SpriteMorph, StageMorph),
+				new Extension.Block(
+					'defaultAdder',
+					'reporter',
+					'operators',
+					'add %n + %n',
+					['7', '-4'],
+					function (v0, v1) { return window.ExampleExtension_fns.default_adder(v0, v1); }
+				).for(SpriteMorph, StageMorph),
 
             ];
         }
@@ -261,13 +271,14 @@
     path = path.substring(0, path.lastIndexOf("/"));
     var s = document.createElement('script');
     s.type = "module";
-    s.innerHTML = `import init, {add_all, explicit_command, explode, fallible_command, fallible_predicate, fallible_reporter, hello_name, hello_world, is_even, picky_boi, print_extension_name, print_hello_world, print_process, receive_test_event, repeat_text} from '${path}/pkg/netsblox_extension_rs.js';
+    s.innerHTML = `import init, {add_all, default_adder, explicit_command, explode, fallible_command, fallible_predicate, fallible_reporter, hello_name, hello_world, is_even, picky_boi, print_extension_name, print_hello_world, print_process, receive_test_event, repeat_text} from '${path}/pkg/netsblox_extension_rs.js';
     
     
         await init();
 
         window.ExampleExtension_fns = {};
 		window.ExampleExtension_fns.add_all = add_all;
+		window.ExampleExtension_fns.default_adder = default_adder;
 		window.ExampleExtension_fns.explicit_command = explicit_command;
 		window.ExampleExtension_fns.explode = explode;
 		window.ExampleExtension_fns.fallible_command = fallible_command;

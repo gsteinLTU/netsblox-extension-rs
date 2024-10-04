@@ -176,3 +176,9 @@ pub fn fallible_predicate() -> Result<bool, f64> {
 pub fn picky_boi(v: &JsValue) -> JsValue {
     v.clone()
 }
+
+#[wasm_bindgen]
+#[netsblox_extension_block(name = "defaultAdder", category = "operators", spec = "add %n + %n", defaults = "['7', '-4']")]
+pub fn default_adder(a: f64, b: f64) -> f64 {
+    a + b
+}
