@@ -1,6 +1,6 @@
 [package]
 name = "netsblox-extension-rs"
-version = "0.2.2"
+version = "0.2.6"
 edition = "2021"
 authors = ["Gordon Stein"]
 license = "MIT OR Apache-2.0"
@@ -11,8 +11,8 @@ homepage = "https://github.com/gsteinLTU/netsblox-extension-rs"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-wasm-bindgen = "0.2.86"
-web-sys = { version = "0.3.63", features = ["console"] }
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["console"] }
 netsblox-extension-macro = { path = "./netsblox-extension-macro" }
 netsblox-extension-util = { path = "./netsblox-extension-util" }
 console_error_panic_hook = "0.1.7"
