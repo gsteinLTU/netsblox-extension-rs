@@ -469,6 +469,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
     let mut known_label_parts: BTreeSet<&str> = include_str!("builtin-types.txt").lines().map(|x| x.trim()).filter(|x| !x.is_empty()).collect();
 
     let label_parts_regex = Regex::new(r"(%mult)?%(\w+)")?;
+    let is_mult = Regex::new(r"%mult")?;
 
     // Parse label parts
     for item in &ast.items {
@@ -654,11 +655,18 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             blocks_str += format!("\t\t\t\t\t{},\n", block.defaults).as_str();
 
             let label_parts_str = label_parts_regex.captures_iter(block.spec).enumerate().map(|(i, _)| format!("v{i}")).collect::<Vec<_>>().join(", ");
+            let fn_args_str = label_parts_regex.captures_iter(block.spec).enumerate().map(|(i, s)| {
+                if is_mult.is_match(s.get(0).unwrap().as_str()) {
+                    format!("v{i}.contents")
+                } else {
+                    format!("v{i}")
+                }
+            }).collect::<Vec<_>>().join(", ");
 
             let proc_token = if block.pass_proc { "this, " } else { "" };
             let terminal_token = if block.block_type == BlockType::Terminator { ".terminal()" } else { "" };
 
-            write!(blocks_str, "\t\t\t\t\tfunction ({label_parts_str}) {{ return window.{extension_name_no_spaces}_fns.{}({proc_token}{label_parts_str}); }}\n", block.impl_fn).unwrap();
+            write!(blocks_str, "\t\t\t\t\tfunction ({label_parts_str}) {{ return window.{extension_name_no_spaces}_fns.{}({proc_token}{fn_args_str}); }}\n", block.impl_fn).unwrap();
             write!(&mut blocks_str, "\t\t\t\t){terminal_token}.for(SpriteMorph, StageMorph),\n").unwrap();
         }
 

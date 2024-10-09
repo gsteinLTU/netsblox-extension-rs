@@ -176,7 +176,7 @@
 					'operators',
 					'add numbers %mult%num',
 					[],
-					function (v0) { return window.ExampleExtension_fns.add_all(v0); }
+					function (v0) { return window.ExampleExtension_fns.add_all(v0.contents); }
 				).for(SpriteMorph, StageMorph),
 				new Extension.Block(
 					'explicitCommand',
