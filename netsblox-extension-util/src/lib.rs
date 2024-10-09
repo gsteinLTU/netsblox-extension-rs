@@ -6,31 +6,58 @@ use simple_error::bail;
 use syn::{Attribute, Expr, ExprCall, ExprPath, ExprLit, ExprReference, ExprArray, ExprStruct, Lit, Item, ItemConst, ItemFn, Member, Meta, PathSegment};
 use std::collections::BTreeSet;
 
-#[derive(Debug, Clone, Copy, Default, Serialize)]
+macro_rules! count_exprs {
+    () => { 0usize };
+    ($h:expr $(,$t:expr)*$(,)?) => { 1usize + count_exprs!($($t),*) };
+}
+macro_rules! extract_tuple {
+    ($e:expr, $($parser:expr),*$(,)?) => {{
+        match $e {
+            Expr::Tuple(t) => {
+                let n = count_exprs!($($parser),*);
+                assert_eq!(n, t.elems.len(), "incorrect number of values in tuple");
+                let mut v = t.elems.iter();
+                ($($parser(v.next().unwrap())),*)
+            }
+            x => panic!("unknown tuple expr: {x:?}"),
+        }
+    }};
+}
+
+macro_rules! try_construct {
+    ($t:ident$(::$tt:ident)* { $($f:ident),*$(,)? }) => {{
+        let ty_name = stringify!($t$(::$tt)*);
+        $t$(::$tt)* { $($f: $f.expect(&format!("missing {ty_name} field: {}", stringify!($f)))),* }
+    }};
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct ExtensionInfo {
     pub name: &'static str,
 }
 
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct CustomBlock {
     pub name: &'static str,
     pub block_type: BlockType,
     pub category: &'static str,
     pub spec: &'static str,
-    pub defaults: Vec<&'static str>,
+    pub defaults: &'static str,
     pub impl_fn: &'static str,
     pub target: TargetObject,
     pub pass_proc: bool,
+    pub pad_top: bool,
+    pub pad_bottom: bool,
 }
 
-#[derive(Debug, Clone, Default, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TargetObject {
-    SpriteMorph, StageMorph, #[default] Both
+    SpriteMorph, StageMorph, Both,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 pub enum BlockType {
-    #[default] #[serde(rename = "command")]
+    #[serde(rename = "command")]
     Command,
     #[serde(rename = "command")]
     Terminator,
@@ -63,13 +90,13 @@ pub struct LabelPart {
     pub readonly: bool,
 }
 
-#[derive(Debug, Clone, Copy, Default, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct CustomCategory {
     pub name: &'static str,
     pub color: (f64, f64, f64)
 }
 
-#[derive(Debug, Clone, Copy, Default, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct ExtensionSetting {
     pub name: &'static str,
     pub id: &'static str,
@@ -125,130 +152,97 @@ fn format_menu(menu: &[Menu]) -> String {
 
 // Turn syn item into instance
 fn recreate_netsblox_extension_info(item: &ItemConst) -> ExtensionInfo {
-    let mut instance = ExtensionInfo::default();
+    let mut name: Option<&'static str> = None;
 
-    if let Expr::Struct(s) = &*item.expr {
-        for field in &s.fields {
-            if let Member::Named(named) = &field.member {
-                let name = named.to_string();
-                {
-                    match name.as_str() {
-                        "name" => instance.name = extract_string(&field.expr),
-                        _ => warn!("Unknown field: {}", name)
+    match &*item.expr {
+        Expr::Struct(s) => {
+            for field in &s.fields {
+                match &field.member {
+                    Member::Named(named) => match named.to_string().as_str() {
+                        "name" => name = Some(extract_string(&field.expr)),
+                        x => panic!("unknown extension info field: {x:?}"),
                     }
+                    x => panic!("unknown extension info field member: {x:?}"),
                 }
             }
         }
+        x => panic!("unknown extension info expr: {x:?}"),
     }
-    instance
+
+    try_construct!(ExtensionInfo { name })
 }
 
 // Turn syn item into instance
 fn recreate_netsblox_extension_custom_category(item: &ItemConst) -> CustomCategory {
-    let mut instance = CustomCategory::default();
+    let mut name: Option<&'static str> = None;
+    let mut color: Option<(f64, f64, f64)> = None;
 
-    if let Expr::Struct(s) = &*item.expr {
-        for field in &s.fields {
-            if let Member::Named(named) = &field.member {
-                let name = named.to_string();
-                {
-                    match name.as_str() {
-                        "name" => instance.name = extract_string(&field.expr),
-                        "color" => {
-                            if let Expr::Tuple(t) = &field.expr {
-                                let colors = &t.elems.iter().collect::<Vec<_>>();
-
-                                if colors.len() < 3 {
-                                    warn!("Invalid color for category {}", instance.name);
-                                } else {
-                                    instance.color.0 = extract_f64(colors[0]);
-                                    instance.color.1 = extract_f64(colors[1]);
-                                    instance.color.2 = extract_f64(colors[2]);
-                                }
-                            }
-                        },
-                        _ => warn!("Unknown field: {}", name)
+    match &*item.expr {
+        Expr::Struct(s) => {
+            for field in &s.fields {
+                match &field.member {
+                    Member::Named(named) => match named.to_string().as_str() {
+                        "name" => name = Some(extract_string(&field.expr)),
+                        "color" => color = Some(extract_tuple!(&field.expr, extract_f64, extract_f64, extract_f64)),
+                        x => panic!("unknown custom category field: {x:?}"),
                     }
+                    x => panic!("unknown custom category field member: {x:?}"),
                 }
             }
         }
+        x => panic!("unknown custom category expr: {x:?}"),
     }
-    instance
+
+    try_construct!(CustomCategory { name, color })
 }
 
 // Turn syn item into instance
 fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomBlock {
-    let mut instance = CustomBlock::default();
-    let mut block_type_override = false;
+    let mut name: Option<&'static str> = None;
+    let mut category: Option<&'static str> = None;
+    let mut spec: Option<&'static str> = None;
+    let mut defaults: Option<&'static str> = None;
+    let mut target: Option<TargetObject> = None;
+    let mut pass_proc: Option<bool> = None;
+    let mut impl_fn: Option<&'static str> = None;
+    let mut block_type: Option<BlockType> = None;
+    let mut pad_top: Option<bool> = None;
+    let mut pad_bottom: Option<bool> = None;
 
     // Parse information stored in attribute
     if let Meta::List(l) = &attr.meta {
         let t = &l.tokens.clone().into_iter().collect::<Vec<_>>();
 
-        let args = t.split(|tt| {
-            if let TokenTree::Punct(p) = tt {
-                return p.as_char() == ',';
-            }
-
-            false
-        }).collect::<Vec<_>>();
-
-        for arg in args {
-            if let TokenTree::Ident(i) = arg.first().unwrap() {
-                let sym = i.to_string();
-                match sym.as_str() {
-                    "name" => {
-                        if let TokenTree::Literal(lit) = &arg[2] {
-                            instance.name = Box::leak(lit.to_string().replace('"', "").into_boxed_str());
-                        }
-                    },
-                    "category" => {
-                        if let TokenTree::Literal(lit) = &arg[2] {
-                            instance.category = Box::leak(lit.to_string().replace('"', "").into_boxed_str());
-                        }
-                    },
-                    "spec" => {
-                        if let TokenTree::Literal(lit) = &arg[2] {
-                            instance.spec = Box::leak(lit.to_string().replace('"', "").into_boxed_str());
-                        }
-                    },
-                    "target" => {
-                        // For now, defaults to targetting both until we have a use-case justifying it, the library doesn't support enough NetsBlox interaction to make sprites vs stage meaningful yet
-                        //warn!("{:?}", arg)
-                    },
-                    "type_override" => {
-                        // Allows for overriding block types if desired, or to make hat/terminal blocks possible
-                        if let TokenTree::Ident(id) = &arg.last().unwrap() {
-                            block_type_override = true;
-                            match id.to_string().as_str() {
-                                "Terminator" => { instance.block_type = BlockType::Terminator },
-                                "Command" => { instance.block_type = BlockType::Command },
-                                "Reporter" => { instance.block_type = BlockType::Reporter },
-                                "Predicate" => { instance.block_type = BlockType::Predicate },
-                                "Hat" => { instance.block_type = BlockType::Hat },
-                                _ => {
-                                    warn!("Unrecognized block type override type: {:?}", id);
-                                    block_type_override = false;
-                                }
-                            }
-                        }
-                    },
-                    "pass_proc" => {
-                        if arg[2].to_string() == "true" {
-                            instance.pass_proc = true;
-                        }
-                    }
-                    x => warn!("Unknown field: {x}"),
+        for arg in t.split(|x| matches!(x, TokenTree::Punct(p) if p.as_char() == ',')) {
+            match arg {
+                [TokenTree::Ident(attr_name), TokenTree::Punct(eq), value @ ..] if eq.as_char() == '=' => match attr_name.to_string().as_str() {
+                    "name" => name = Some(extract_string_meta(value)),
+                    "category" => category = Some(extract_string_meta(value)),
+                    "spec" => spec = Some(extract_string_meta(value)),
+                    "defaults" => defaults = Some(extract_string_meta(value)),
+                    "pass_proc" => pass_proc = Some(extract_bool_meta(value)),
+                    "type_override" | "block_type" => block_type = Some(extract_block_type_meta(value)), // Allows for overriding block types if desired, or to make hat/terminal blocks possible
+                    "target" => target = Some(extract_target_object_meta(value)),
+                    "pad_top" => pad_top = Some(extract_bool_meta(value)),
+                    "pad_bottom" => pad_bottom = Some(extract_bool_meta(value)),
+                    x => panic!("unknown extension block attr field: {x:?}"),
                 }
+                x => panic!("unknown meta attr format: {x:?}"),
             }
         }
     }
 
-    // Get information from function signature
-    instance.impl_fn = Box::leak(item.sig.ident.to_string().into_boxed_str());
+    if pad_top.is_none() { pad_top = Some(false); }
+    if pad_bottom.is_none() { pad_bottom = Some(false); }
+    if defaults.is_none() { defaults = Some("[]"); }
+    if target.is_none() { target = Some(TargetObject::Both); }
+    if pass_proc.is_none() { pass_proc = Some(false); }
 
-    if !block_type_override {
-        instance.block_type = match &item.sig.output {
+    if impl_fn.is_none() {
+        impl_fn = Some(Box::leak(item.sig.ident.to_string().into_boxed_str())); // Get information from function signature
+    }
+    if block_type.is_none() {
+        block_type = Some(match &item.sig.output {
             syn::ReturnType::Default => BlockType::Command,
             syn::ReturnType::Type(_, b) => match b.as_ref() {
                 syn::Type::Tuple(t) if t.elems.is_empty() => BlockType::Command,
@@ -266,12 +260,11 @@ fn recreate_netsblox_extension_block(item: &ItemFn, attr: &Attribute) -> CustomB
                 }
                 _ => BlockType::Reporter
             },
-        };
+        });
     }
 
-    instance
+    try_construct!(CustomBlock { name, block_type, category, spec, defaults, impl_fn, target, pass_proc, pad_top, pad_bottom })
 }
-
 
 // Turn syn item into instance
 fn recreate_netsblox_extension_label_part(item: &ItemConst) -> LabelPart {
@@ -300,37 +293,38 @@ fn recreate_netsblox_extension_label_part(item: &ItemConst) -> LabelPart {
         x => panic!("unknown label part expr: {x:?}"),
     }
 
-    LabelPart {
-        spec: spec.expect("missing spec field"),
-        text: text.expect("missing text field"),
-        numeric: numeric.expect("missing numeric field"),
-        menu: menu.expect("missing menu field"),
-        readonly: readonly.expect("missing readonly field"),
-    }
+    try_construct!(LabelPart { spec, text, numeric, menu, readonly })
 }
 
 fn recreate_netsblox_extension_setting(item: &ItemConst) -> ExtensionSetting {
-    let mut instance = ExtensionSetting::default();
+    let mut name: Option<&'static str> = None;
+    let mut id: Option<&'static str> = None;
+    let mut default_value: Option<bool> = None;
+    let mut on_hint: Option<&'static str> = None;
+    let mut off_hint: Option<&'static str> = None;
+    let mut hidden: Option<bool> = None;
 
-    if let Expr::Struct(s) = &*item.expr {
-        for field in &s.fields {
-            if let Member::Named(named) = &field.member {
-                let name = named.to_string();
-                {
-                    match name.as_str() {
-                        "name" => instance.name = extract_string(&field.expr),
-                        "id" => instance.id = extract_string(&field.expr),
-                        "on_hint" => instance.on_hint = extract_string(&field.expr),
-                        "off_hint" => instance.off_hint = extract_string(&field.expr),
-                        "default_value" => instance.default_value = extract_bool(&field.expr),
-                        "hidden" => instance.hidden = extract_bool(&field.expr),
-                        _ => warn!("Unknown field: {}", name)
+    match &*item.expr {
+        Expr::Struct(s) => {
+            for field in s.fields.iter() {
+                match &field.member {
+                    Member::Named(named) => match named.to_string().as_str() {
+                        "name" => name = Some(extract_string(&field.expr)),
+                        "id" => id = Some(extract_string(&field.expr)),
+                        "default_value" => default_value = Some(extract_bool(&field.expr)),
+                        "on_hint" => on_hint = Some(extract_string(&field.expr)),
+                        "off_hint" => off_hint = Some(extract_string(&field.expr)),
+                        "hidden" => hidden = Some(extract_bool(&field.expr)),
+                        x => panic!("unknown extension setting field: {x:?}"),
                     }
+                    x => panic!("unknown extension setting field member: {x:?}"),
                 }
             }
         }
+        x => panic!("unknown extension setting expr: {x:?}"),
     }
-    instance
+
+    try_construct!(ExtensionSetting { name, id, default_value, on_hint, off_hint, hidden })
 }
 
 fn extract_menu(expr: &Expr) -> Menu {
@@ -348,10 +342,7 @@ fn extract_menu(expr: &Expr) -> Menu {
                     }
                 }
 
-                Menu::Entry {
-                    label: label.expect("missing menu entry label field"),
-                    value: value.expect("missing menu entry value field"),
-                }
+                try_construct!(Menu::Entry { label, value })
             }
             "Submenu" => {
                 let mut label: Option<&'static str> = None;
@@ -373,6 +364,31 @@ fn extract_menu(expr: &Expr) -> Menu {
             x => panic!("unknown menu variant: {x:?}"),
         }
         x => panic!("unknown menu expr: {x:?}"),
+    }
+}
+
+fn extract_block_type_meta(tree: &[TokenTree]) -> BlockType {
+    match tree {
+        [.., TokenTree::Ident(t), TokenTree::Punct(c1), TokenTree::Punct(c2), TokenTree::Ident(v)] if t.to_string() == "BlockType" && c1.as_char() == ':' && c2.as_char() == ':' => match v.to_string().as_str() {
+            "Terminator" => BlockType::Terminator,
+            "Command" => BlockType::Command,
+            "Reporter" => BlockType::Reporter,
+            "Predicate" => BlockType::Predicate,
+            "Hat" => BlockType::Hat,
+            x => panic!("unknown block type variant: {x:?}"),
+        }
+        x => panic!("unknown block type meta expr: {x:?}"),
+    }
+}
+fn extract_target_object_meta(tree: &[TokenTree]) -> TargetObject {
+    match tree {
+        [.., TokenTree::Ident(t), TokenTree::Punct(c1), TokenTree::Punct(c2), TokenTree::Ident(v)] if t.to_string() == "TargetObject" && c1.as_char() == ':' && c2.as_char() == ':' => match v.to_string().as_str() {
+            "Both" => TargetObject::Both,
+            "SpriteMorph" => TargetObject::SpriteMorph,
+            "StageMorph" => TargetObject::StageMorph,
+            x => panic!("unknown block type variant: {x:?}"),
+        }
+        x => panic!("unknown block type meta expr: {x:?}"),
     }
 }
 
@@ -403,11 +419,27 @@ fn extract_string(expr: &syn::Expr) -> &'static str {
         x => panic!("unknown string expr: {x:?}"),
     }
 }
+fn extract_string_meta(tree: &[TokenTree]) -> &'static str {
+    match tree {
+        [TokenTree::Literal(lit)] => {
+            let v = lit.to_string();
+            v[v.find('"').unwrap() + 1..v.rfind('"').unwrap()].to_owned().leak()
+        }
+        x => panic!("unknown string meta value: {x:?}"),
+    }
+}
 
 fn extract_bool(expr: &syn::Expr) -> bool {
     match expr {
         Expr::Lit(ExprLit { attrs: _, lit: Lit::Bool(v) }) => v.value,
         x => panic!("unknown bool expr: {x:?}"),
+    }
+}
+fn extract_bool_meta(tree: &[TokenTree]) -> bool {
+    match tree {
+        [x] if x.to_string() == "true" => true,
+        [x] if x.to_string() == "false" => false,
+        x => panic!("unknown bool meta value: {x:?}"),
     }
 }
 
@@ -576,52 +608,40 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
 
         let mut palette_string = "".to_string();
 
-        let mut categories_map: HashMap<String, Vec<String>> = HashMap::new();
+        let mut categories_map: HashMap<String, Vec<&CustomBlock>> = HashMap::new();
 
         for (_, block) in &custom_blocks {
             let block_cat = serde_json::to_string(&block.category)?.strip_prefix('\"').unwrap().strip_suffix('\"').unwrap().to_string();
-
-            if !categories_map.contains_key(&block_cat) {
-                categories_map.insert(block_cat.clone(), vec![]);
-            }
-
-            categories_map.get_mut(&block_cat).unwrap().push(block.name.to_string());
+            categories_map.entry(block_cat).or_default().push(block);
         }
-
 
         let mut cat_names: Vec<_> = categories_map.keys().collect();
         cat_names.sort_unstable();
 
         for category in cat_names {
-            palette_string += "\t\t\t\tnew Extension.PaletteCategory(\n";
-            palette_string += format!("\t\t\t\t\t'{}',\n", category).as_str();
-            palette_string += "\t\t\t\t\t[\n";
-            for block_name in categories_map.get(category).unwrap() {
-                let get = &custom_blocks.iter().find(|(b, _)| b == block_name).unwrap().1;
-                if get.target == TargetObject::SpriteMorph || get.target == TargetObject::Both {
-                    write!(palette_string, "\t\t\t\t\t\tnew Extension.Palette.Block('{}'),\n", block_name).unwrap();
+            for target in [TargetObject::SpriteMorph, TargetObject::StageMorph] {
+                palette_string += "\t\t\t\tnew Extension.PaletteCategory(\n";
+                palette_string += format!("\t\t\t\t\t'{}',\n", category).as_str();
+                palette_string += "\t\t\t\t\t[\n";
+                for block in categories_map.get(category).unwrap() {
+                    let get = &custom_blocks.iter().find(|(b, _)| b == block.name).unwrap().1;
+                    if get.target == target || get.target == TargetObject::Both {
+                        if block.pad_top {
+                            palette_string.push_str("\t\t\t\t\t\t'-',\n");
+                        }
+                        write!(palette_string, "\t\t\t\t\t\tnew Extension.Palette.Block('{}'),\n", block.name).unwrap();
+                        if block.pad_bottom {
+                            palette_string.push_str("\t\t\t\t\t\t'-',\n");
+                        }
+                    }
                 }
+                palette_string += "\t\t\t\t\t],\n";
+                palette_string += format!("\t\t\t\t\t{target:?}\n").as_str();
+                palette_string += "\t\t\t\t),\n";
             }
-            palette_string += "\t\t\t\t\t],\n";
-            palette_string += "\t\t\t\t\tSpriteMorph\n";
-            palette_string += "\t\t\t\t),\n";
-
-            palette_string += "\t\t\t\tnew Extension.PaletteCategory(\n";
-            palette_string += format!("\t\t\t\t\t'{}',\n", category).as_str();
-            palette_string += "\t\t\t\t\t[\n";
-            for block_name in categories_map.get(category).unwrap() {
-                let get = &custom_blocks.iter().find(|(b, _)| b == block_name).unwrap().1;
-                if get.target == TargetObject::StageMorph || get.target == TargetObject::Both {
-                    write!(palette_string, "\t\t\t\t\t\tnew Extension.Palette.Block('{}'),\n", block_name).unwrap();
-                }
-            }
-            palette_string += "\t\t\t\t\t],\n";
-            palette_string += "\t\t\t\t\tStageMorph\n";
-            palette_string += "\t\t\t\t),\n";
         }
 
         content = content.replace("$PALETTE", &palette_string);
-
 
         let mut blocks_str = "".to_string();
 
@@ -631,7 +651,7 @@ pub fn build() -> Result<(), Box<dyn Error>>  {
             blocks_str += format!("\t\t\t\t\t'{}',\n", serde_json::to_string(&block.block_type)?.strip_prefix("\"").unwrap().strip_suffix("\"").unwrap()).as_str();
             blocks_str += format!("\t\t\t\t\t'{}',\n", serde_json::to_string(&block.category)?.strip_prefix("\"").unwrap().strip_suffix("\"").unwrap()).as_str();
             blocks_str += format!("\t\t\t\t\t'{}',\n", block.spec).as_str();
-            blocks_str += "\t\t\t\t\t[],\n";
+            blocks_str += format!("\t\t\t\t\t{},\n", block.defaults).as_str();
 
             let label_parts_str = label_parts_regex.captures_iter(block.spec).enumerate().map(|(i, _)| format!("v{i}")).collect::<Vec<_>>().join(", ");
 
